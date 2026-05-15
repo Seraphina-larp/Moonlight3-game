@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GM 控制台 · 那一束月光 III</title>
+<title>GM 控制台 · 那一束月光三</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600&display=swap');
   :root { --deep:#08091a; --panel:#0f1535; --border:rgba(201,168,76,0.25); --gold:#c9a84c; --gold-light:#f0d080; --silver:#a8c0d6; --white:#f0f4ff; --green:#4ade80; --red:#f87171; }
@@ -11,7 +11,7 @@
   body { background:var(--deep); color:var(--white); font-family:'Noto Serif TC',serif; min-height:100vh; padding:20px; }
   h1 { text-align:center; font-size:20px; font-weight:300; color:var(--gold-light); letter-spacing:6px; padding:20px 0 10px; border-bottom:1px solid var(--border); margin-bottom:24px; }
   .gm-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1100px; margin:0 auto; }
-  @media(max-width:700px) { .gm-grid { grid-template-columns:1fr; } }
+  @media(max-width:700px){ .gm-grid{grid-template-columns:1fr;} }
   .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
   .panel-title { font-size:12px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
   .status-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -32,6 +32,7 @@
   .btn-outline { background:transparent; border:1px solid var(--border); color:var(--silver); }
   .btn-outline:hover { border-color:var(--gold); color:var(--gold); }
   .btn-green { background:rgba(74,222,128,0.15); border:1px solid var(--green); color:var(--green); }
+  .btn-green:hover { background:rgba(74,222,128,0.3); }
   .scores-table { width:100%; border-collapse:collapse; font-size:12px; }
   .scores-table th { color:var(--gold); letter-spacing:2px; font-weight:400; padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; font-size:11px; }
   .scores-table td { padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--silver); }
@@ -48,10 +49,13 @@
   #gmLog { max-height:120px; overflow-y:auto; font-size:11px; color:var(--silver); letter-spacing:1px; line-height:1.8; }
   .log-entry { padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
   .log-time { color:rgba(168,192,214,0.5); margin-right:8px; }
+
+  /* Reveal flow notice */
+  .flow-notice { font-size:11px; color:rgba(168,192,214,0.5); letter-spacing:1px; margin-top:8px; font-style:italic; }
 </style>
 </head>
 <body>
-<h1>⚙ GM 控制台 · 月亮墜落了一千次</h1>
+<h1>⚙ GM 控制台 · 那一束月光三</h1>
 <div class="gm-grid">
   <div class="panel">
     <div class="panel-title">玩家狀態</div>
@@ -60,11 +64,14 @@
   <div class="panel">
     <div class="panel-title">遊戲控制</div>
     <div class="current-state-display" id="currentStateDisplay">章節：<strong>等待開始</strong></div>
+
     <div class="ctrl-section">
       <div class="ctrl-label">第一章 · 愛情的心電圖</div>
       <button class="btn btn-gold" onclick="startChapter1()">▶ 開始第一章</button>
     </div>
+
     <div class="divider"></div>
+
     <div class="ctrl-section">
       <div class="ctrl-label">評分時刻控制</div>
       <div class="moment-tabs">
@@ -76,22 +83,41 @@
       </div>
       <button class="btn btn-red" id="lockBtn" onclick="toggleLock()">🔒 鎖定當前時刻</button>
     </div>
+
     <div class="divider"></div>
+
     <div class="ctrl-section">
-      <div class="ctrl-label">公布心電圖</div>
+      <div class="ctrl-label">公布對方評分（逐組）</div>
       <div class="reveal-groups">
-        <button class="btn btn-outline" onclick="revealGroup('A')">公布 周可一 × 劉白</button>
-        <button class="btn btn-outline" onclick="revealGroup('B')">公布 李天樂 × 姜萊</button>
-        <button class="btn btn-outline" onclick="revealGroup('C')">公布 星群 × 杜綿</button>
-        <button class="btn btn-green" onclick="revealGroup('all')">🌕 全部公布</button>
+        <button class="btn btn-outline" onclick="revealScores('A')">公布 周可一 × 劉白</button>
+        <button class="btn btn-outline" onclick="revealScores('B')">公布 李天樂 × 姜萊</button>
+        <button class="btn btn-outline" onclick="revealScores('C')">公布 星群 × 杜綿</button>
+        <button class="btn btn-outline" onclick="revealScores('all')">公布 全部</button>
       </div>
+      <div class="flow-notice">玩家會看到「對方給自己的分數」</div>
     </div>
+
     <div class="divider"></div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">最終公布心電圖</div>
+      <div class="reveal-groups">
+        <button class="btn btn-outline" onclick="revealEcg('A')">心電圖 周可一 × 劉白</button>
+        <button class="btn btn-outline" onclick="revealEcg('B')">心電圖 李天樂 × 姜萊</button>
+        <button class="btn btn-outline" onclick="revealEcg('C')">心電圖 星群 × 杜綿</button>
+        <button class="btn btn-green" onclick="revealEcg('all')">🌕 全部心電圖</button>
+      </div>
+      <div class="flow-notice">玩家會看到自己所有時刻的心電圖折線</div>
+    </div>
+
+    <div class="divider"></div>
+
     <div class="ctrl-section">
       <div class="ctrl-label" style="color:var(--red)">危險操作</div>
-      <button class="btn btn-red" onclick="resetGame()">⚠ 重置遊戲</button>
+      <button class="btn btn-red" onclick="closeAndReset()">🚪 關閉並重置遊戲</button>
     </div>
   </div>
+
   <div class="panel full-panel">
     <div class="panel-title">即時評分總覽</div>
     <table class="scores-table">
@@ -99,6 +125,7 @@
       <tbody id="scoresBody"></tbody>
     </table>
   </div>
+
   <div class="panel full-panel">
     <div class="panel-title">操作記錄</div>
     <div id="gmLog"></div>
@@ -118,7 +145,6 @@ const firebaseConfig = {
   messagingSenderId: "671539326384",
   appId: "1:671539326384:web:360482295180808abe3a75"
 };
-
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
 
@@ -134,53 +160,57 @@ const CHAR_IMGS = {
 const CHARACTERS = ['姜萊','李天樂','星群','杜綿','周可一','劉白'];
 const MOMENTS = ['初遇時刻','告白時刻','相愛時刻','分手時刻','此刻'];
 let isLocked = false;
+let currentMomentIndex = 0;
 
 function initStatusGrid() {
   const grid = document.getElementById('statusGrid');
   grid.innerHTML = '';
   CHARACTERS.forEach(name => {
     const card = document.createElement('div');
-    card.className = 'status-card';
-    card.id = 'sc_' + name;
+    card.className = 'status-card'; card.id = 'sc_'+name;
     card.innerHTML = `<img src="${CHAR_IMGS[name]}" alt="${name}"><div class="sc-name">${name}</div><div class="sc-player" id="sc_player_${name}">—</div><div class="sc-dot" id="sc_dot_${name}"></div>`;
     grid.appendChild(card);
   });
 }
 
-onValue(ref(db, 'players'), (snap) => {
+onValue(ref(db,'players'), (snap) => {
   const players = snap.val() || {};
   CHARACTERS.forEach(name => {
     const p = players[name];
-    const dot = document.getElementById('sc_dot_' + name);
-    const playerName = document.getElementById('sc_player_' + name);
-    const card = document.getElementById('sc_' + name);
+    const dot = document.getElementById('sc_dot_'+name);
+    const pname = document.getElementById('sc_player_'+name);
+    const card = document.getElementById('sc_'+name);
     if (p && p.online) {
       dot && dot.classList.add('online');
       card && card.classList.add('online');
-      if (playerName) playerName.textContent = p.name || name;
+      if (pname) pname.textContent = p.name || name;
     } else {
       dot && dot.classList.remove('online');
       card && card.classList.remove('online');
-      if (playerName) playerName.textContent = '—';
+      if (pname) pname.textContent = '—';
     }
   });
   updateScoresTable(players);
 });
 
-onValue(ref(db, 'gameState'), (snap) => {
+onValue(ref(db,'gameState'), (snap) => {
   const s = snap.val() || {};
-  const display = document.getElementById('currentStateDisplay');
-  if (!s.phase || s.phase === 'waiting') {
-    display.innerHTML = '章節：<strong>等待開始</strong>';
-  } else if (s.phase === 'scoring') {
-    const moment = MOMENTS[s.momentIndex] || '?';
-    const lockText = s.locked ? '🔒 已鎖定' : '🔓 開放中';
-    display.innerHTML = `章節：<strong>愛情的心電圖</strong> · 時刻：<strong>${moment}</strong> · ${lockText}`;
-    isLocked = s.locked || false;
+  const d = document.getElementById('currentStateDisplay');
+  if (!s.phase || s.phase==='waiting') {
+    d.innerHTML = '章節：<strong>等待開始</strong>';
+  } else if (s.phase==='scoring') {
+    const m = MOMENTS[s.momentIndex]||'?';
+    const lk = s.locked ? '🔒 已鎖定' : '🔓 開放中';
+    d.innerHTML = `章節：<strong>愛情的心電圖</strong> · 時刻：<strong>${m}</strong> · ${lk}`;
+    isLocked = s.locked||false;
+    currentMomentIndex = s.momentIndex??0;
     document.getElementById('lockBtn').textContent = isLocked ? '🔓 解除鎖定' : '🔒 鎖定當前時刻';
-    document.querySelectorAll('.m-tab').forEach((t,i) => t.classList.toggle('active', i === s.momentIndex));
-  } else if (s.phase === 'ecg') {
-    display.innerHTML = '章節：<strong>公布心電圖</strong>';
+    document.querySelectorAll('.m-tab').forEach((t,i)=>t.classList.toggle('active',i===s.momentIndex));
+  } else if (s.phase==='reveal') {
+    const m = MOMENTS[s.momentIndex]||'?';
+    d.innerHTML = `公布評分：<strong>${m}</strong> · 組別：<strong>${s.revealedGroup}</strong>`;
+  } else if (s.phase==='ecg') {
+    d.innerHTML = `公布心電圖：<strong>${s.revealedGroup}</strong>`;
   }
 });
 
@@ -192,7 +222,7 @@ function updateScoresTable(players) {
     let cells = `<td>${name}</td>`;
     MOMENTS.forEach(m => {
       const score = p && p.scores && p.scores[m];
-      cells += score !== undefined ? `<td class="score-val">${score}</td>` : `<td class="pending">·</td>`;
+      cells += score!==undefined ? `<td class="score-val">${score}</td>` : `<td class="pending">·</td>`;
     });
     const tr = document.createElement('tr');
     tr.innerHTML = cells;
@@ -201,37 +231,47 @@ function updateScoresTable(players) {
 }
 
 window.startChapter1 = async () => {
-  await set(ref(db, 'gameState'), { chapter:'ch1_ecg', phase:'scoring', momentIndex:0, locked:false, showEcg:false, revealedGroup:null });
+  await set(ref(db,'gameState'), { chapter:'ch1_ecg', phase:'scoring', momentIndex:0, locked:false, revealedGroup:null });
   addLog('開始第一章 · 初遇時刻');
 };
 window.openMoment = async (idx) => {
-  await update(ref(db,'gameState'), { phase:'scoring', momentIndex:idx, locked:false, showEcg:false });
-  addLog('開啟時刻：' + MOMENTS[idx]);
+  await update(ref(db,'gameState'), { phase:'scoring', momentIndex:idx, locked:false, revealedGroup:null });
+  addLog('開啟時刻：'+MOMENTS[idx]);
 };
 window.toggleLock = async () => {
-  const newLock = !isLocked;
-  await update(ref(db,'gameState'), { locked:newLock });
-  addLog(newLock ? '鎖定時刻' : '解除鎖定');
+  const nl = !isLocked;
+  await update(ref(db,'gameState'), { locked:nl });
+  addLog(nl?'鎖定時刻':'解除鎖定');
 };
-window.revealGroup = async (group) => {
+// Reveal partner's score for current moment
+window.revealScores = async (group) => {
   const labels = { A:'周可一×劉白', B:'李天樂×姜萊', C:'星群×杜綿', all:'全部' };
-  await update(ref(db,'gameState'), { phase:'ecg', showEcg:true, revealedGroup:group });
-  addLog('公布心電圖：' + labels[group]);
+  await update(ref(db,'gameState'), { phase:'reveal', revealedGroup:group, momentIndex:currentMomentIndex });
+  addLog(`公布評分 [${labels[group]}]：${MOMENTS[currentMomentIndex]}`);
 };
-window.resetGame = async () => {
-  if (!confirm('確定要重置整個遊戲？')) return;
-  await remove(ref(db,'gameState'));
-  await remove(ref(db,'players'));
-  addLog('⚠ 遊戲已重置');
+// Reveal ECG (final)
+window.revealEcg = async (group) => {
+  const labels = { A:'周可一×劉白', B:'李天樂×姜萊', C:'星群×杜綿', all:'全部' };
+  await update(ref(db,'gameState'), { phase:'ecg', revealedGroup:group });
+  addLog(`公布心電圖 [${labels[group]}]`);
+};
+window.closeAndReset = async () => {
+  if (!confirm('確定要關閉遊戲？所有玩家將被強制退出，所有資料將清除。')) return;
+  await set(ref(db,'gameState'), { phase: 'closed' });
+  setTimeout(async () => {
+    await remove(ref(db,'gameState'));
+    await remove(ref(db,'players'));
+  }, 2000);
+  addLog('🚪 遊戲已關閉並重置');
 };
 
 function addLog(msg) {
   const log = document.getElementById('gmLog');
   const now = new Date().toLocaleTimeString('zh-TW');
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
-  entry.innerHTML = `<span class="log-time">${now}</span>${msg}`;
-  log.insertBefore(entry, log.firstChild);
+  const e = document.createElement('div');
+  e.className = 'log-entry';
+  e.innerHTML = `<span class="log-time">${now}</span>${msg}`;
+  log.insertBefore(e, log.firstChild);
 }
 
 initStatusGrid();

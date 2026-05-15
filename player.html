@@ -3,30 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>那一束月光 III · 月亮墜落了一千次</title>
+<title>那一束月光三</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600&display=swap');
   :root {
-    --deep-blue: #0a0e2e;
-    --mid-blue: #1a2a6c;
-    --gold: #c9a84c;
-    --gold-light: #f0d080;
-    --silver: #a8c0d6;
-    --white: #f0f4ff;
+    --deep-blue: #0a0e2e; --gold: #c9a84c; --gold-light: #f0d080;
+    --silver: #a8c0d6; --white: #f0f4ff;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    background: var(--deep-blue);
-    color: var(--white);
-    font-family: 'Noto Serif TC', serif;
-    min-height: 100vh;
+    background: var(--deep-blue); color: var(--white);
+    font-family: 'Noto Serif TC', serif; min-height: 100vh;
     background-image:
       radial-gradient(ellipse at 20% 50%, rgba(26,42,108,0.8) 0%, transparent 60%),
       radial-gradient(ellipse at 80% 20%, rgba(123,184,232,0.15) 0%, transparent 50%);
   }
   body::before {
-    content: '';
-    position: fixed; top:0; left:0; right:0; bottom:0;
+    content:''; position:fixed; top:0;left:0;right:0;bottom:0;
     background-image:
       radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
       radial-gradient(1px 1px at 30% 8%, rgba(255,255,255,0.4) 0%, transparent 100%),
@@ -35,90 +28,108 @@
       radial-gradient(1px 1px at 85% 18%, rgba(255,255,255,0.4) 0%, transparent 100%),
       radial-gradient(1px 1px at 20% 40%, rgba(255,255,255,0.3) 0%, transparent 100%),
       radial-gradient(1px 1px at 60% 35%, rgba(255,255,255,0.5) 0%, transparent 100%),
-      radial-gradient(1px 1px at 90% 45%, rgba(255,255,255,0.3) 0%, transparent 100%),
       radial-gradient(1px 1px at 40% 55%, rgba(255,255,255,0.4) 0%, transparent 100%),
       radial-gradient(1px 1px at 75% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
       radial-gradient(1px 1px at 15% 70%, rgba(255,255,255,0.5) 0%, transparent 100%),
       radial-gradient(1px 1px at 55% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
       radial-gradient(1px 1px at 35% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
       radial-gradient(1px 1px at 80% 80%, rgba(255,255,255,0.5) 0%, transparent 100%);
-    pointer-events: none; z-index: 0;
+    pointer-events:none; z-index:0;
   }
-  #app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-  .title-header { text-align: center; padding: 40px 20px 20px; animation: fadeIn 1.5s ease; }
-  .title-header .subtitle { font-size: 11px; letter-spacing: 4px; color: var(--silver); text-transform: uppercase; margin-bottom: 8px; }
-  .title-header h1 { font-size: clamp(18px,4vw,32px); font-weight: 300; color: var(--gold-light); letter-spacing: 6px; text-shadow: 0 0 30px rgba(201,168,76,0.5); }
-  .screen { display: none; width: 100%; max-width: 900px; animation: fadeIn 0.8s ease; }
-  .screen.active { display: block; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
-  .section-title { text-align: center; font-size: 14px; letter-spacing: 3px; color: var(--gold); margin: 30px 0 20px; text-transform: uppercase; }
-  .character-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; padding: 0 10px; }
-  @media(max-width:600px) { .character-grid { grid-template-columns: repeat(2,1fr); } }
-  .char-card { position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; aspect-ratio: 3/4; background: rgba(255,255,255,0.05); }
-  .char-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 8px 30px rgba(201,168,76,0.3); }
-  .char-card.selected { border-color: var(--gold); box-shadow: 0 0 30px rgba(201,168,76,0.5); }
-  .char-card.taken { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-  .char-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .char-name-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,14,0.85)); padding: 30px 12px 12px; text-align: center; }
-  .char-name-overlay span { font-size: 20px; font-weight: 600; color: var(--white); letter-spacing: 3px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
-  .taken-badge { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--silver); letter-spacing: 3px; }
-  .name-input-section { text-align: center; margin: 20px 0; }
-  .name-input-section p { color: var(--silver); font-size: 13px; letter-spacing: 2px; margin-bottom: 10px; }
-  .styled-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(201,168,76,0.4); border-radius: 8px; color: var(--white); font-family: 'Noto Serif TC', serif; font-size: 16px; padding: 10px 20px; text-align: center; width: 200px; outline: none; transition: border-color 0.3s; }
-  .styled-input:focus { border-color: var(--gold); }
-  .btn { display: inline-block; padding: 12px 36px; border-radius: 40px; border: none; cursor: pointer; font-family: 'Noto Serif TC', serif; font-size: 14px; letter-spacing: 3px; transition: all 0.3s ease; }
-  .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-light)); color: var(--deep-blue); font-weight: 600; box-shadow: 0 4px 20px rgba(201,168,76,0.4); }
-  .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(201,168,76,0.6); }
-  .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-  .btn-center { display: flex; justify-content: center; margin: 24px 0; }
-  .waiting-container { text-align: center; padding: 60px 20px; }
-  .waiting-char-img { width: 180px; height: 240px; object-fit: cover; border-radius: 12px; margin: 0 auto 24px; display: block; border: 2px solid rgba(201,168,76,0.4); box-shadow: 0 0 40px rgba(201,168,76,0.2); }
-  .waiting-char-name { font-size: 28px; color: var(--gold-light); letter-spacing: 6px; margin-bottom: 8px; }
-  .waiting-status { font-size: 12px; color: var(--silver); letter-spacing: 3px; animation: pulse 2s infinite; }
-  .players-status { display: flex; justify-content: center; gap: 12px; margin: 30px 0; flex-wrap: wrap; }
-  .player-dot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .player-dot .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background 0.5s; }
-  .player-dot .dot.online { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.6); }
-  .player-dot .dot-label { font-size: 10px; color: var(--silver); letter-spacing: 1px; }
-  .scoring-header { text-align: center; margin-bottom: 30px; }
-  .moment-title { font-size: clamp(20px,5vw,36px); color: var(--gold-light); letter-spacing: 6px; margin-bottom: 8px; text-shadow: 0 0 20px rgba(240,208,128,0.4); }
-  .moment-subtitle { font-size: 12px; color: var(--silver); letter-spacing: 3px; }
-  .scoring-pair { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 30px 0; flex-wrap: wrap; }
-  .pair-char { text-align: center; }
-  .pair-char img { width: 100px; height: 133px; object-fit: cover; border-radius: 8px; border: 2px solid rgba(201,168,76,0.3); }
-  .pair-char .pair-name { font-size: 14px; color: var(--silver); letter-spacing: 2px; margin-top: 6px; }
-  .pair-char.self img { border-color: rgba(201,168,76,0.8); box-shadow: 0 0 20px rgba(201,168,76,0.3); }
-  .pair-char.self .pair-name { color: var(--gold); }
-  .heart-icon { font-size: 32px; color: var(--gold); flex-shrink: 0; }
-  .score-slider-container { text-align: center; margin: 20px 0; padding: 0 20px; }
-  .score-label { font-size: clamp(48px,12vw,80px); color: var(--gold-light); font-weight: 300; letter-spacing: 4px; text-shadow: 0 0 30px rgba(240,208,128,0.5); line-height: 1; margin-bottom: 16px; }
-  .score-slider { -webkit-appearance: none; appearance: none; width: 100%; max-width: 400px; height: 4px; border-radius: 2px; outline: none; cursor: pointer; }
-  .score-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--gold-light); box-shadow: 0 0 12px rgba(240,208,128,0.6); cursor: pointer; }
-  .score-hint { font-size: 11px; color: rgba(168,192,214,0.6); letter-spacing: 2px; margin-top: 10px; }
-  .submitted-state { text-align: center; padding: 20px; animation: fadeIn 0.5s ease; }
-  .submitted-state .big-score { font-size: 72px; color: var(--gold-light); letter-spacing: 4px; }
-  .submitted-state .submitted-label { font-size: 12px; color: var(--silver); letter-spacing: 4px; margin-top: 8px; animation: pulse 2s infinite; }
-  .ecg-container { padding: 20px; text-align: center; }
-  .ecg-title { font-size: 16px; letter-spacing: 4px; color: var(--gold); margin-bottom: 6px; }
-  .ecg-subtitle { font-size: 12px; color: var(--silver); letter-spacing: 2px; margin-bottom: 30px; }
-  canvas#ecgCanvas { background: rgba(255,255,255,0.03); border: 1px solid rgba(201,168,76,0.2); border-radius: 12px; max-width: 100%; }
-  .revealed-scores { display: flex; justify-content: center; gap: 16px; margin: 20px 0; flex-wrap: wrap; }
-  .moment-score-chip { text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(201,168,76,0.3); border-radius: 10px; padding: 10px 16px; min-width: 70px; }
-  .moment-score-chip .chip-moment { font-size: 10px; color: var(--silver); letter-spacing: 2px; margin-bottom: 4px; }
-  .moment-score-chip .chip-score { font-size: 22px; color: var(--gold-light); }
-  .divider { width: 100%; height: 1px; background: linear-gradient(to right, transparent, rgba(201,168,76,0.4), transparent); margin: 20px 0; }
-  #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(26,42,108,0.95); border: 1px solid var(--gold); color: var(--gold-light); padding: 12px 28px; border-radius: 40px; font-size: 13px; letter-spacing: 2px; opacity: 0; transition: all 0.4s ease; z-index: 9999; pointer-events: none; }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #app { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px; }
+  .title-header { text-align:center; padding:40px 20px 20px; animation:fadeIn 1.5s ease; }
+  .title-header .subtitle { font-size:11px; letter-spacing:4px; color:var(--silver); text-transform:uppercase; margin-bottom:8px; }
+  .title-header h1 { font-size:clamp(18px,4vw,32px); font-weight:300; color:var(--gold-light); letter-spacing:6px; text-shadow:0 0 30px rgba(201,168,76,0.5); }
+  .screen { display:none; width:100%; max-width:900px; animation:fadeIn 0.8s ease; }
+  .screen.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .section-title { text-align:center; font-size:14px; letter-spacing:3px; color:var(--gold); margin:30px 0 20px; }
+  .character-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding:0 10px; }
+  @media(max-width:600px){ .character-grid{grid-template-columns:repeat(2,1fr);} }
+  .char-card { position:relative; border-radius:12px; overflow:hidden; cursor:pointer; border:2px solid transparent; transition:all 0.3s; aspect-ratio:3/4; background:rgba(255,255,255,0.05); }
+  .char-card:hover { border-color:var(--gold); transform:translateY(-4px); box-shadow:0 8px 30px rgba(201,168,76,0.3); }
+  .char-card.selected { border-color:var(--gold); box-shadow:0 0 30px rgba(201,168,76,0.5); }
+  .char-card.taken { opacity:0.35; cursor:not-allowed; pointer-events:none; }
+  .char-card img { width:100%; height:100%; object-fit:cover; display:block; }
+  .char-name-overlay { position:absolute; bottom:0;left:0;right:0; background:linear-gradient(transparent,rgba(0,0,14,0.85)); padding:30px 12px 12px; text-align:center; }
+  .char-name-overlay span { font-size:20px; font-weight:600; color:var(--white); letter-spacing:3px; text-shadow:0 2px 8px rgba(0,0,0,0.8); }
+  .taken-badge { position:absolute;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--silver);letter-spacing:3px; }
+  .name-input-section { text-align:center; margin:20px 0; }
+  .name-input-section p { color:var(--silver); font-size:13px; letter-spacing:2px; margin-bottom:10px; }
+  .styled-input { background:rgba(255,255,255,0.05); border:1px solid rgba(201,168,76,0.4); border-radius:8px; color:var(--white); font-family:'Noto Serif TC',serif; font-size:16px; padding:10px 20px; text-align:center; width:200px; outline:none; transition:border-color 0.3s; }
+  .styled-input:focus { border-color:var(--gold); }
+  .btn { display:inline-block; padding:12px 36px; border-radius:40px; border:none; cursor:pointer; font-family:'Noto Serif TC',serif; font-size:14px; letter-spacing:3px; transition:all 0.3s; }
+  .btn-gold { background:linear-gradient(135deg,var(--gold),var(--gold-light)); color:var(--deep-blue); font-weight:600; box-shadow:0 4px 20px rgba(201,168,76,0.4); }
+  .btn-gold:hover { transform:translateY(-2px); box-shadow:0 6px 30px rgba(201,168,76,0.6); }
+  .btn-gold:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-center { display:flex; justify-content:center; margin:24px 0; }
+  .waiting-container { text-align:center; padding:60px 20px; }
+  .waiting-char-img { width:180px; height:240px; object-fit:cover; border-radius:12px; margin:0 auto 24px; display:block; border:2px solid rgba(201,168,76,0.4); box-shadow:0 0 40px rgba(201,168,76,0.2); }
+  .waiting-char-name { font-size:28px; color:var(--gold-light); letter-spacing:6px; margin-bottom:8px; }
+  .waiting-status { font-size:12px; color:var(--silver); letter-spacing:3px; animation:pulse 2s infinite; }
+  .players-status { display:flex; justify-content:center; gap:12px; margin:30px 0; flex-wrap:wrap; }
+  .player-dot { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .player-dot .dot { width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,0.2); transition:background 0.5s; }
+  .player-dot .dot.online { background:#4ade80; box-shadow:0 0 8px rgba(74,222,128,0.6); }
+  .player-dot .dot-label { font-size:10px; color:var(--silver); letter-spacing:1px; }
+  .scoring-header { text-align:center; margin-bottom:30px; }
+  .moment-title { font-size:clamp(20px,5vw,36px); color:var(--gold-light); letter-spacing:6px; margin-bottom:8px; text-shadow:0 0 20px rgba(240,208,128,0.4); }
+  .moment-subtitle { font-size:12px; color:var(--silver); letter-spacing:3px; }
+  .scoring-pair { display:flex; align-items:center; justify-content:center; gap:20px; margin:30px 0; flex-wrap:wrap; }
+  .pair-char { text-align:center; }
+  .pair-char img { width:100px; height:133px; object-fit:cover; border-radius:8px; border:2px solid rgba(201,168,76,0.3); }
+  .pair-char .pair-name { font-size:14px; color:var(--silver); letter-spacing:2px; margin-top:6px; }
+  .pair-char.self img { border-color:rgba(201,168,76,0.8); box-shadow:0 0 20px rgba(201,168,76,0.3); }
+  .pair-char.self .pair-name { color:var(--gold); }
+  .heart-icon { font-size:32px; color:var(--gold); flex-shrink:0; }
+  .score-slider-container { text-align:center; margin:20px 0; padding:0 20px; }
+  .score-label { font-size:clamp(48px,12vw,80px); color:var(--gold-light); font-weight:300; letter-spacing:4px; text-shadow:0 0 30px rgba(240,208,128,0.5); line-height:1; margin-bottom:16px; }
+  .score-slider { -webkit-appearance:none; appearance:none; width:100%; max-width:400px; height:4px; border-radius:2px; outline:none; cursor:pointer; }
+  .score-slider::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:var(--gold-light); box-shadow:0 0 12px rgba(240,208,128,0.6); cursor:pointer; }
+  .score-hint { font-size:11px; color:rgba(168,192,214,0.6); letter-spacing:2px; margin-top:10px; }
+  .submitted-state { text-align:center; padding:40px 20px; animation:fadeIn 0.5s ease; }
+  .submitted-state .big-score { font-size:72px; color:var(--gold-light); letter-spacing:4px; }
+  .submitted-state .submitted-label { font-size:12px; color:var(--silver); letter-spacing:4px; margin-top:8px; animation:pulse 2s infinite; }
+
+  /* Reveal screen - partner's score */
+  .reveal-container { text-align:center; padding:40px 20px; animation:fadeIn 0.8s ease; }
+  .reveal-label { font-size:12px; color:var(--silver); letter-spacing:4px; margin-bottom:8px; }
+  .reveal-moment { font-size:16px; color:var(--gold); letter-spacing:4px; margin-bottom:30px; }
+  .reveal-pair { display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; margin-bottom:30px; }
+  .reveal-char { text-align:center; }
+  .reveal-char img { width:90px; height:120px; object-fit:cover; border-radius:8px; border:2px solid rgba(201,168,76,0.3); }
+  .reveal-char .rc-name { font-size:13px; color:var(--silver); letter-spacing:2px; margin-top:6px; }
+  .reveal-char.partner img { border-color:var(--gold); box-shadow:0 0 20px rgba(201,168,76,0.4); }
+  .reveal-char.partner .rc-name { color:var(--gold); }
+  .reveal-score-box { text-align:center; }
+  .reveal-score-box .rs-label { font-size:11px; color:var(--silver); letter-spacing:3px; margin-bottom:6px; }
+  .reveal-score-box .rs-number { font-size:80px; color:var(--gold-light); font-weight:300; letter-spacing:4px; text-shadow:0 0 40px rgba(240,208,128,0.6); line-height:1; }
+  .reveal-score-box .rs-sublabel { font-size:11px; color:rgba(168,192,214,0.6); letter-spacing:3px; margin-top:8px; }
+
+  /* ECG screen */
+  .ecg-container { padding:20px; text-align:center; }
+  .ecg-title { font-size:16px; letter-spacing:4px; color:var(--gold); margin-bottom:6px; }
+  .ecg-subtitle { font-size:12px; color:var(--silver); letter-spacing:2px; margin-bottom:30px; }
+  canvas#ecgCanvas { background:rgba(255,255,255,0.03); border:1px solid rgba(201,168,76,0.2); border-radius:12px; max-width:100%; }
+  .revealed-scores { display:flex; justify-content:center; gap:16px; margin:20px 0; flex-wrap:wrap; }
+  .moment-score-chip { text-align:center; background:rgba(255,255,255,0.05); border:1px solid rgba(201,168,76,0.3); border-radius:10px; padding:10px 16px; min-width:70px; }
+  .moment-score-chip .chip-moment { font-size:10px; color:var(--silver); letter-spacing:2px; margin-bottom:4px; }
+  .moment-score-chip .chip-score { font-size:22px; color:var(--gold-light); }
+
+  .divider { width:100%; height:1px; background:linear-gradient(to right,transparent,rgba(201,168,76,0.4),transparent); margin:20px 0; }
+  #toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(20px); background:rgba(26,42,108,0.95); border:1px solid var(--gold); color:var(--gold-light); padding:12px 28px; border-radius:40px; font-size:13px; letter-spacing:2px; opacity:0; transition:all 0.4s; z-index:9999; pointer-events:none; }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 <div id="app">
   <div class="title-header">
     <div class="subtitle">That Beam of Moonlight III</div>
-    <h1>月亮墜落了一千次</h1>
+    <h1>那 一 束 月 光 三</h1>
   </div>
 
+  <!-- 角色選擇 -->
   <div id="screen-select" class="screen active">
     <div class="name-input-section">
       <p>請輸入你的名字</p>
@@ -131,6 +142,7 @@
     </div>
   </div>
 
+  <!-- 等待 -->
   <div id="screen-waiting" class="screen">
     <div class="waiting-container">
       <img id="waitingCharImg" class="waiting-char-img" src="" alt="">
@@ -141,6 +153,7 @@
     </div>
   </div>
 
+  <!-- 評分 -->
   <div id="screen-scoring" class="screen">
     <div class="scoring-header">
       <div class="moment-title" id="momentTitle">初遇時刻</div>
@@ -149,6 +162,12 @@
     <div id="scoringContent"></div>
   </div>
 
+  <!-- 公布：對方給我的分 -->
+  <div id="screen-reveal" class="screen">
+    <div class="reveal-container" id="revealContainer"></div>
+  </div>
+
+  <!-- 心電圖（最終） -->
   <div id="screen-ecg" class="screen">
     <div class="ecg-container">
       <div class="ecg-title">愛情的心電圖</div>
@@ -173,34 +192,44 @@ const firebaseConfig = {
   messagingSenderId: "671539326384",
   appId: "1:671539326384:web:360482295180808abe3a75"
 };
-
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
 
 const BASE = "https://seraphina-larp.github.io/Moonlight3-game";
 const CHARACTERS = {
-  '姜萊':   { img: BASE + '/%E5%A7%9C%E8%90%8A.jpg',   group: 'B' },
-  '李天樂': { img: BASE + '/%E6%9D%8E%E5%A4%A9%E6%A8%82.jpg', group: 'B' },
-  '星群':   { img: BASE + '/%E6%98%9F%E7%BE%A4.jpg',   group: 'C' },
-  '杜綿':   { img: BASE + '/%E6%9D%9C%E7%B6%BF.jpg',   group: 'C' },
-  '周可一': { img: BASE + '/%E5%91%A8%E5%8F%AF%E4%B8%80.jpg', group: 'A' },
-  '劉白':   { img: BASE + '/%E5%8A%89%E7%99%BD.jpg',   group: 'A' },
+  '姜萊':   { img: BASE+'/%E5%A7%9C%E8%90%8A.jpg',   group:'B' },
+  '李天樂': { img: BASE+'/%E6%9D%8E%E5%A4%A9%E6%A8%82.jpg', group:'B' },
+  '星群':   { img: BASE+'/%E6%98%9F%E7%BE%A4.jpg',   group:'C' },
+  '杜綿':   { img: BASE+'/%E6%9D%9C%E7%B6%BF.jpg',   group:'C' },
+  '周可一': { img: BASE+'/%E5%91%A8%E5%8F%AF%E4%B8%80.jpg', group:'A' },
+  '劉白':   { img: BASE+'/%E5%8A%89%E7%99%BD.jpg',   group:'A' },
 };
-
 const PARTNERS = { '周可一':'劉白','劉白':'周可一','李天樂':'姜萊','姜萊':'李天樂','星群':'杜綿','杜綿':'星群' };
 const MOMENTS = ['初遇時刻','告白時刻','相愛時刻','分手時刻','此刻'];
 
+// ===== STATE =====
 let myChar = null, myPlayerName = '', selectedChar = null;
-let currentMomentIndex = -1, myScores = {}, hasSubmittedThisMoment = false;
+let currentMomentIndex = -1;
+let myScores = {};       // moment -> score I gave partner
+let hasSubmittedThisMoment = false;
 let _lastMomentForReset = -1;
 
+// ===== SESSION RESTORE =====
+// Save session to localStorage so reopening restores character
+function saveSession() {
+  if (myChar) localStorage.setItem('nl3_session', JSON.stringify({ char: myChar, name: myPlayerName }));
+}
+function loadSession() {
+  try { return JSON.parse(localStorage.getItem('nl3_session')); } catch { return null; }
+}
+
+// ===== INIT =====
 function initCharGrid() {
   const grid = document.getElementById('charGrid');
   grid.innerHTML = '';
   Object.entries(CHARACTERS).forEach(([name, data]) => {
     const card = document.createElement('div');
-    card.className = 'char-card';
-    card.id = 'char_' + name;
+    card.className = 'char-card'; card.id = 'char_' + name;
     card.innerHTML = `<img src="${data.img}" alt="${name}" loading="lazy"><div class="char-name-overlay"><span>${name}</span></div>`;
     card.onclick = () => selectChar(name);
     grid.appendChild(card);
@@ -222,20 +251,45 @@ window.confirmCharacter = async function() {
   myPlayerName = name;
   const snap = await get(ref(db, 'players/' + selectedChar));
   if (snap.exists() && snap.val().online) {
-    showToast('此角色已被選走'); 
-    document.getElementById('char_' + selectedChar).classList.add('taken');
-    selectedChar = null;
-    document.getElementById('confirmCharBtn').disabled = true;
-    return;
+    showToast('此角色已被選走'); return;
   }
   myChar = selectedChar;
-  await set(ref(db, 'players/' + myChar), { name: myPlayerName, char: myChar, online: true, scores: {} });
-  showScreen('screen-waiting');
-  document.getElementById('waitingCharImg').src = CHARACTERS[myChar].img;
-  document.getElementById('waitingCharName').textContent = myChar;
-  startListening();
+  saveSession();
+  // Read existing scores if any (resume scenario)
+  if (snap.exists() && snap.val().scores) {
+    myScores = snap.val().scores;
+  }
+  await set(ref(db, 'players/' + myChar), {
+    name: myPlayerName, char: myChar, online: true,
+    scores: myScores
+  });
+  enterGame();
 };
 
+async function tryResumeSession() {
+  const session = loadSession();
+  if (!session) return false;
+  const snap = await get(ref(db, 'players/' + session.char));
+  // Only resume if game is still active (players node exists)
+  if (!snap.exists()) return false;
+  myChar = session.char;
+  myPlayerName = session.name;
+  const data = snap.val();
+  myScores = data.scores || {};
+  // Mark back online
+  await update(ref(db, 'players/' + myChar), { online: true, name: myPlayerName });
+  enterGame();
+  return true;
+}
+
+function enterGame() {
+  document.getElementById('waitingCharImg').src = CHARACTERS[myChar].img;
+  document.getElementById('waitingCharName').textContent = myChar;
+  showScreen('screen-waiting');
+  startListening();
+}
+
+// ===== LISTENERS =====
 function startListening() {
   onValue(ref(db, 'players'), (snap) => {
     const players = snap.val() || {};
@@ -244,10 +298,7 @@ function startListening() {
       const card = document.getElementById('char_' + name);
       if (!card) return;
       if (players[name] && players[name].online && name !== myChar) {
-        if (!card.classList.contains('taken')) {
-          card.classList.add('taken');
-          card.innerHTML += '<div class="taken-badge">已選擇</div>';
-        }
+        card.classList.add('taken');
       }
     });
   });
@@ -257,7 +308,7 @@ function startListening() {
   });
   onValue(ref(db, 'gameState/momentIndex'), (snap) => {
     const idx = snap.val();
-    if (idx !== null && idx !== _lastMomentForReset) {
+    if (idx !== null && idx !== undefined && idx !== _lastMomentForReset) {
       hasSubmittedThisMoment = false;
       _lastMomentForReset = idx;
     }
@@ -272,7 +323,7 @@ function updatePlayerDots(players) {
     const div = document.createElement('div');
     div.className = 'player-dot';
     const isOnline = players[name] && players[name].online;
-    div.innerHTML = `<div class="dot ${isOnline ? 'online' : ''}"></div><div class="dot-label">${name}</div>`;
+    div.innerHTML = `<div class="dot ${isOnline?'online':''}"></div><div class="dot-label">${name}</div>`;
     container.appendChild(div);
   });
   const onlineCount = Object.values(players).filter(p => p && p.online).length;
@@ -280,23 +331,40 @@ function updatePlayerDots(players) {
   if (txt) txt.textContent = onlineCount >= 6 ? '所有玩家已就位，等待主持人開始...' : `等待其他玩家加入... (${onlineCount}/6)`;
 }
 
+// ===== GAME STATE HANDLER =====
 function handleGameState(state) {
   const phase = state.phase || 'waiting';
   const momentIndex = state.momentIndex ?? -1;
   const locked = state.locked || false;
-  const showEcg = state.showEcg || false;
   const revealedGroup = state.revealedGroup || null;
-  if (phase === 'waiting') {
+
+  if (phase === 'closed') {
+    // GM closed the game - force back to character select and clear session
+    localStorage.removeItem('nl3_session');
+    myChar = null; myPlayerName = ''; selectedChar = null;
+    myScores = {}; hasSubmittedThisMoment = false;
+    initCharGrid();
+    showScreen('screen-select');
+    showToast('主持人已關閉遊戲');
+    return;
+  } else if (phase === 'waiting') {
     showScreen('screen-waiting');
   } else if (phase === 'scoring') {
     currentMomentIndex = momentIndex;
-    if (showEcg) { showEcgScreen(revealedGroup); }
-    else { showScoringScreen(momentIndex, locked); }
+    // Check if submitted this moment - auto-restore from myScores
+    const moment = MOMENTS[momentIndex];
+    if (myScores[moment] !== undefined) hasSubmittedThisMoment = true;
+    showScoringScreen(momentIndex, locked);
+  } else if (phase === 'reveal') {
+    // Show partner's score to me for this moment
+    showRevealScreen(state);
   } else if (phase === 'ecg') {
-    showEcgScreen(revealedGroup);
+    // Final ECG reveal
+    showEcgScreen(revealedGroup, state);
   }
 }
 
+// ===== SCORING SCREEN =====
 function showScoringScreen(momentIndex, locked) {
   showScreen('screen-scoring');
   const moment = MOMENTS[momentIndex];
@@ -308,18 +376,12 @@ function showScoringScreen(momentIndex, locked) {
     content.innerHTML = `<div class="submitted-state"><div class="big-score">${score}</div><div class="submitted-label">已送出 · 等待主持人公布</div></div>`;
     return;
   }
-  const currentScore = myScores[moment] || 50;
+  const currentScore = myScores[moment] !== undefined ? myScores[moment] : 50;
   content.innerHTML = `
     <div class="scoring-pair">
-      <div class="pair-char self">
-        <img src="${CHARACTERS[myChar].img}" alt="${myChar}">
-        <div class="pair-name">${myChar}</div>
-      </div>
+      <div class="pair-char self"><img src="${CHARACTERS[myChar].img}" alt="${myChar}"><div class="pair-name">${myChar}</div></div>
       <div class="heart-icon">♡</div>
-      <div class="pair-char">
-        <img src="${CHARACTERS[partner].img}" alt="${partner}">
-        <div class="pair-name">${partner}</div>
-      </div>
+      <div class="pair-char"><img src="${CHARACTERS[partner].img}" alt="${partner}"><div class="pair-name">${partner}</div></div>
     </div>
     <div class="score-slider-container">
       <div class="score-label" id="scoreDisplay">${currentScore}</div>
@@ -336,12 +398,11 @@ window.updateSlider = function(val) {
   document.getElementById('scoreDisplay').textContent = val;
   updateSliderBg(val);
 };
-
 function updateSliderBg(val) {
-  const slider = document.getElementById('scoreSlider');
-  if (!slider) return;
-  const pct = (val - 1) / 99 * 100;
-  slider.style.background = `linear-gradient(to right, var(--gold) 0%, var(--gold) ${pct}%, rgba(255,255,255,0.2) ${pct}%, rgba(255,255,255,0.2) 100%)`;
+  const s = document.getElementById('scoreSlider');
+  if (!s) return;
+  const pct = (val-1)/99*100;
+  s.style.background = `linear-gradient(to right, var(--gold) 0%, var(--gold) ${pct}%, rgba(255,255,255,0.2) ${pct}%, rgba(255,255,255,0.2) 100%)`;
 }
 
 window.submitScore = async function() {
@@ -355,12 +416,51 @@ window.submitScore = async function() {
   showToast('評分已送出');
 };
 
-function showEcgScreen(revealedGroup) {
+// ===== REVEAL SCREEN - show partner's score to me =====
+async function showRevealScreen(state) {
+  const myGroup = CHARACTERS[myChar].group;
+  const revealedGroup = state.revealedGroup || null;
+  // If not my group yet, stay in scoring/waiting
+  if (revealedGroup && revealedGroup !== 'all' && revealedGroup !== myGroup) {
+    // Stay on current screen (submitted state)
+    return;
+  }
+  const momentIndex = state.momentIndex ?? currentMomentIndex;
+  const moment = MOMENTS[momentIndex];
+  const partner = PARTNERS[myChar];
+
+  // Fetch partner's score for me (partner's scores[moment])
+  const snap = await get(ref(db, `players/${partner}/scores/${moment}`));
+  const partnerScore = snap.exists() ? snap.val() : null;
+
+  showScreen('screen-reveal');
+  const container = document.getElementById('revealContainer');
+  container.innerHTML = `
+    <div class="reveal-label">對方給你的評分</div>
+    <div class="reveal-moment">${moment}</div>
+    <div class="reveal-pair">
+      <div class="reveal-char partner">
+        <img src="${CHARACTERS[partner].img}" alt="${partner}">
+        <div class="rc-name">${partner}</div>
+      </div>
+      <div class="reveal-score-box">
+        <div class="rs-label">給 ${myChar} 的分數</div>
+        <div class="rs-number">${partnerScore !== null ? partnerScore : '—'}</div>
+        <div class="rs-sublabel">/ 100</div>
+      </div>
+      <div class="reveal-char">
+        <img src="${CHARACTERS[myChar].img}" alt="${myChar}">
+        <div class="rc-name">${myChar}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== ECG SCREEN =====
+function showEcgScreen(revealedGroup, state) {
   const myGroup = CHARACTERS[myChar].group;
   if (revealedGroup && revealedGroup !== 'all' && revealedGroup !== myGroup) {
-    showScreen('screen-waiting');
-    const txt = document.getElementById('waitingStatusText');
-    if (txt) txt.textContent = '等待主持人公布你的心電圖...';
+    // Not my group - stay on reveal or waiting
     return;
   }
   showScreen('screen-ecg');
@@ -384,39 +484,43 @@ function drawEcg() {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0,0,W,H);
-  ctx.strokeStyle = 'rgba(201,168,76,0.1)'; ctx.lineWidth = 1;
-  for (let i=0; i<=5; i++) { const y=40+(H-80)*(i/5); ctx.beginPath(); ctx.moveTo(50,y); ctx.lineTo(W-20,y); ctx.stroke(); }
-  for (let i=0; i<=4; i++) { const x=50+(W-70)*(i/4); ctx.beginPath(); ctx.moveTo(x,30); ctx.lineTo(x,H-30); ctx.stroke(); }
+  // Grid
+  ctx.strokeStyle='rgba(201,168,76,0.1)'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){const y=40+(H-80)*(i/5);ctx.beginPath();ctx.moveTo(50,y);ctx.lineTo(W-20,y);ctx.stroke();}
+  for(let i=0;i<=4;i++){const x=50+(W-70)*(i/4);ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x,H-30);ctx.stroke();}
+  // Labels
   ctx.fillStyle='rgba(168,192,214,0.7)'; ctx.font='11px sans-serif'; ctx.textAlign='center';
-  MOMENTS.forEach((m,i) => { const x=50+(W-70)*(i/4); ctx.fillText(m.replace('時刻',''),x,H-10); });
+  MOMENTS.forEach((m,i)=>{ctx.fillText(m.replace('時刻',''),50+(W-70)*(i/4),H-10);});
   ctx.textAlign='right';
-  [0,25,50,75,100].forEach((v,i) => { const y=40+(H-80)*((100-v)/100); ctx.fillText(v,44,y+4); });
-  const points = MOMENTS.map((m,i) => {
-    const score = myScores[m] ?? null;
-    if (score===null) return null;
-    return { x: 50+(W-70)*(i/4), y: 40+(H-80)*((100-score)/100), score };
+  [0,25,50,75,100].forEach(v=>{ctx.fillText(v,44,40+(H-80)*((100-v)/100)+4);});
+  // Points
+  const pts = MOMENTS.map((m,i)=>{
+    const s=myScores[m]??null; if(s===null)return null;
+    return{x:50+(W-70)*(i/4),y:40+(H-80)*((100-s)/100),score:s};
   }).filter(Boolean);
-  if (points.length < 2) return;
+  if(pts.length<2)return;
+  // Wave line
   ctx.beginPath(); ctx.strokeStyle='#f0d080'; ctx.lineWidth=2.5;
   ctx.shadowColor='rgba(240,208,128,0.6)'; ctx.shadowBlur=8;
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i=0; i<points.length-1; i++) {
-    const p0=points[i], p1=points[i+1];
-    const midX=(p0.x+p1.x)/2;
-    const waveAmp=Math.abs(p1.y-p0.y)*0.3+10;
-    ctx.bezierCurveTo(midX-(midX-p0.x)*0.3, p0.y-waveAmp, midX-(p1.x-midX)*0.3, p1.y-waveAmp, p1.x, p1.y);
+  ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i],p1=pts[i+1],midX=(p0.x+p1.x)/2;
+    const amp=Math.abs(p1.y-p0.y)*0.3+10;
+    ctx.bezierCurveTo(midX-(midX-p0.x)*0.3,p0.y-amp,midX-(p1.x-midX)*0.3,p1.y-amp,p1.x,p1.y);
   }
   ctx.stroke(); ctx.shadowBlur=0;
-  points.forEach(p => {
-    ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2);
-    ctx.fillStyle='#f0d080'; ctx.shadowColor='rgba(240,208,128,0.8)'; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(240,208,128,0.9)'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(p.score, p.x, p.y-14);
+  // Dots
+  pts.forEach(p=>{
+    ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);
+    ctx.fillStyle='#f0d080';ctx.shadowColor='rgba(240,208,128,0.8)';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(240,208,128,0.9)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillText(p.score,p.x,p.y-14);
   });
 }
 
+// ===== HELPERS =====
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 function showToast(msg) {
@@ -424,10 +528,18 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'),2500);
 }
 
+// ===== BOOT =====
 initCharGrid();
+// Try to resume session first
+tryResumeSession().then(resumed => {
+  if (!resumed) {
+    // Normal flow - show character select
+    showScreen('screen-select');
+  }
+});
 
 window.addEventListener('beforeunload', () => {
-  if (myChar) set(ref(db, `players/${myChar}/online`), false);
+  if (myChar) update(ref(db, `players/${myChar}`), { online: false });
 });
 </script>
 </body>
