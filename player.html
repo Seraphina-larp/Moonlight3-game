@@ -152,9 +152,10 @@
     border-left:3px solid rgba(255,255,255,0.15);
     border-radius:0 10px 10px 0;
     padding:14px 16px;
-    font-size:14px; line-height:1.9; color:var(--white);
+    font-size:14px; line-height:1.8; color:var(--white);
     white-space:pre-wrap;
   }
+  .dialogue-bubble .db-text br { display:block; content:''; margin-top:6px; }
   .dialogue-bubble.is-me .db-text {
     background:rgba(201,168,76,0.1);
     border-left-color:var(--gold);
@@ -1119,7 +1120,7 @@ async function showDialogueScreen(state) {
     const div = document.createElement('div');
     div.className = 'dialogue-bubble' + (isMe ? ' is-me' : '');
     div.style.animationDelay = (i * 0.08) + 's';
-    div.innerHTML = `<div class="db-speaker">【${line.s}】</div><div class="db-text">${line.t.replace(/\n/g, '<br><br>')}</div>`;
+    div.innerHTML = `<div class="db-speaker">【${line.s}】</div><div class="db-text">${line.t.replace(/\n/g, '<br>')}</div>`;
     scroll.appendChild(div);
   });
 }
