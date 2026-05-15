@@ -718,19 +718,37 @@ window.confirmCharacter = async function() {
 };
 
 async function tryResumeSession() {
-  const session = loadSession();
-  if (!session) return false;
-  const snap = await get(ref(db, 'players/' + session.char));
-  // Only resume if game is still active (players node exists)
-  if (!snap.exists()) return false;
-  myChar = session.char;
-  myPlayerName = session.name;
-  const data = snap.val();
-  myScores = data.scores || {};
-  // Mark back online
-  await update(ref(db, 'players/' + myChar), { online: true, name: myPlayerName });
-  enterGame();
-  return true;
+  try {
+    const session = loadSession();
+    if (!session) return false;
+    // Check if game has been reset
+    const playersSnap = await get(ref(db, 'players'));
+    if (!playersSnap.exists()) {
+      localStorage.removeItem('nl3_session');
+      return false;
+    }
+    const snap = await get(ref(db, 'players/' + session.char));
+    if (!snap.exists()) {
+      localStorage.removeItem('nl3_session');
+      return false;
+    }
+    const data = snap.val();
+    // If player node exists but is stale (no online flag), treat as reset
+    if (!data || data.online === false) {
+      localStorage.removeItem('nl3_session');
+      return false;
+    }
+    myChar = session.char;
+    myPlayerName = session.name;
+    myScores = data.scores || {};
+    await update(ref(db, 'players/' + myChar), { online: true, name: myPlayerName });
+    enterGame();
+    return true;
+  } catch(e) {
+    // Any error during resume -> clear session and show fresh login
+    localStorage.removeItem('nl3_session');
+    return false;
+  }
 }
 
 function enterGame() {
@@ -744,6 +762,16 @@ function enterGame() {
 function startListening() {
   onValue(ref(db, 'players'), (snap) => {
     const players = snap.val() || {};
+    // If Firebase was reset but we still have a session, clear it
+    if (myChar && (!players[myChar] || !players[myChar].online)) {
+      // Our record is gone - game was reset, re-register
+      if (players[myChar] === undefined) {
+        // Completely gone, re-register silently
+        set(ref(db, 'players/' + myChar), {
+          name: myPlayerName, char: myChar, online: true, scores: myScores
+        });
+      }
+    }
     updatePlayerDots(players);
     Object.keys(CHARACTERS).forEach(name => {
       const card = document.getElementById('char_' + name);
@@ -2211,13 +2239,29 @@ function showToast(msg) {
 
 // ===== BOOT =====
 initCharGrid();
-// Try to resume session first
-tryResumeSession().then(resumed => {
+
+// Pre-boot: check if game has been reset, clear stale session
+async function boot() {
+  try {
+    const playersSnap = await get(ref(db, 'players'));
+    if (!playersSnap.exists()) {
+      localStorage.removeItem('nl3_session');
+    }
+    // Also check gameState - if closed or missing, clear session
+    const stateSnap = await get(ref(db, 'gameState'));
+    if (!stateSnap.exists() || (stateSnap.val() && stateSnap.val().phase === 'closed')) {
+      localStorage.removeItem('nl3_session');
+    }
+  } catch(e) {
+    localStorage.removeItem('nl3_session');
+  }
+
+  const resumed = await tryResumeSession();
   if (!resumed) {
-    // Normal flow - show character select
     showScreen('screen-select');
   }
-});
+}
+boot();
 
 window.addEventListener('beforeunload', () => {
   if (myChar) update(ref(db, `players/${myChar}`), { online: false });
