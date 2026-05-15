@@ -106,7 +106,63 @@
   .rc-score-sub { font-size:11px; color:rgba(168,192,214,0.5); letter-spacing:2px; margin-top:4px; }
   .rc-vs { font-size:28px; color:rgba(201,168,76,0.4); flex-shrink:0; }
 
+  /* ===== MOON PARTY ===== */
+  .moon-title { text-align:center; padding:30px 20px 10px; }
+  .moon-title h2 { font-size:clamp(22px,5vw,36px); color:var(--gold-light); letter-spacing:6px; font-weight:300; text-shadow:0 0 20px rgba(240,208,128,0.4); }
+  .moon-title p { font-size:12px; color:var(--silver); letter-spacing:3px; margin-top:8px; }
+
+  .moon-options { display:flex; flex-direction:column; gap:14px; padding:20px; max-width:420px; margin:0 auto; }
+  .moon-option {
+    display:flex; align-items:center; gap:16px;
+    padding:18px 24px; border-radius:16px; cursor:pointer;
+    border:2px solid rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.04);
+    transition:all 0.3s ease; position:relative;
+    user-select:none;
+  }
+  .moon-option:hover:not(.full):not(.mine) { border-color:rgba(201,168,76,0.5); background:rgba(201,168,76,0.08); transform:translateY(-2px); }
+  .moon-option.mine { border-color:var(--gold); background:rgba(201,168,76,0.12); cursor:default; }
+  .moon-option.full:not(.mine) { opacity:0.45; cursor:not-allowed; }
+  .moon-option .moon-emoji { font-size:36px; flex-shrink:0; }
+  .moon-option .moon-info { flex:1; }
+  .moon-option .moon-name { font-size:18px; color:var(--white); letter-spacing:3px; }
+  .moon-option .moon-count { font-size:11px; color:var(--silver); letter-spacing:2px; margin-top:3px; }
+  .moon-option .moon-tag {
+    position:absolute; right:16px; top:50%; transform:translateY(-50%);
+    font-size:10px; letter-spacing:2px; padding:3px 10px; border-radius:20px;
+  }
+  .moon-option.mine .moon-tag { background:rgba(201,168,76,0.3); color:var(--gold); }
+  .moon-option.full:not(.mine) .moon-tag { background:rgba(248,113,113,0.2); color:#f87171; }
+
+  /* Dialogue screen */
+  .dialogue-header { text-align:center; padding:24px 20px 16px; }
+  .dialogue-moon { font-size:40px; margin-bottom:8px; }
+  .dialogue-title { font-size:13px; color:var(--gold); letter-spacing:4px; }
+  .dialogue-scroll { max-width:560px; margin:0 auto; padding:0 16px 40px; }
+  .dialogue-bubble {
+    margin-bottom:20px; animation:fadeIn 0.5s ease both;
+  }
+  .dialogue-bubble .db-speaker {
+    font-size:11px; letter-spacing:3px; margin-bottom:6px;
+    color:var(--silver);
+  }
+  .dialogue-bubble.is-me .db-speaker { color:var(--gold); }
+  .dialogue-bubble .db-text {
+    background:rgba(255,255,255,0.05);
+    border-left:3px solid rgba(255,255,255,0.15);
+    border-radius:0 10px 10px 0;
+    padding:14px 16px;
+    font-size:14px; line-height:1.9; color:var(--white);
+    white-space:pre-wrap;
+  }
+  .dialogue-bubble.is-me .db-text {
+    background:rgba(201,168,76,0.1);
+    border-left-color:var(--gold);
+    color:#fef3c7;
+  }
+
   /* Love choice screen */
+  .choice-btns { display:flex; flex-direction:column; align-items:center; gap:16px; margin:40px 0; }
   .choice-btns { display:flex; flex-direction:column; align-items:center; gap:16px; margin:40px 0; }
   .choice-btn {
     width: 260px; padding: 20px 0;
@@ -224,6 +280,24 @@
       <div class="moment-subtitle" id="lovechoiceResultRound"></div>
     </div>
     <div id="lovechoiceResult"></div>
+  </div>
+
+  <!-- 滿月派對 選月相 -->
+  <div id="screen-moonparty" class="screen">
+    <div class="moon-title">
+      <h2>滿 月 派 對</h2>
+      <p>選擇你的房間 · 每間限兩人</p>
+    </div>
+    <div class="moon-options" id="moonOptions"></div>
+  </div>
+
+  <!-- 滿月派對 小劇場 -->
+  <div id="screen-dialogue" class="screen">
+    <div class="dialogue-header">
+      <div class="dialogue-moon" id="dialogueMoon"></div>
+      <div class="dialogue-title" id="dialogueTitle"></div>
+    </div>
+    <div class="dialogue-scroll" id="dialogueScroll"></div>
   </div>
 
   <!-- 心電圖（最終） -->
@@ -416,6 +490,10 @@ function handleGameState(state) {
     showRevealScreen(state);
   } else if (phase === 'ecg') {
     showEcgScreen(revealedGroup, state);
+  } else if (phase === 'moonparty') {
+    showMoonPartyScreen(state);
+  } else if (phase === 'moonparty_reveal') {
+    showDialogueScreen(state);
   } else if (phase === 'lovechoice') {
     // Ch2: 還能再愛嗎 - voting
     showLoveChoiceScreen(state);
@@ -578,6 +656,471 @@ function drawEcg() {
     ctx.fillStyle='#f0d080';ctx.shadowColor='rgba(240,208,128,0.8)';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
     ctx.fillStyle='rgba(240,208,128,0.9)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
     ctx.fillText(p.score,p.x,p.y-14);
+  });
+}
+
+// ===== MOON PARTY (滿月派對) =====
+const DIALOGUES = {
+  "姜萊_星群": [
+    {
+      "s": "星群",
+      "t": "姜萊，其實在更早的時候我就愛你，我從頭到尾都愛你。只是我根本不明白自己究竟想要什麼，也不知道自己的公式要求的是什麼答案，我一直害怕一段親密關係，像我父母一樣走到萬劫不復的地步，所以我遲疑，我猶豫，我逃避，我拒絕。可是後來我才想明白，不是每一段感情都會那樣，或許只是因為他們從一開始就並不相愛。\n\n而現在我知道了我要什麼，我也知道你要什麼——你想要的，絕對的真誠，100分的愛。"
+    },
+    {
+      "s": "姜萊",
+      "t": "就像你說的，原來我愛別人的方式，就是我希望被愛的方式。我曾不為人知地、隱蔽地愛你。等我終於釋懷時你卻開始愛上我了。我當時對你的好都是認真的，對你的愛都是真誠的。\n\n星群，你坐過雲霄飛車嗎？我玩過一次之後快被嚇死了。那種從高空迅速墜落所帶來的失重感讓我心慌害怕，但是這種感覺在我遇見你以後一次又一次地出現。所以你說，愛到底帶給我的是什麼？\n\n我現在真的相信，你也一樣愛我了。在過去的時間裡，我們都愛過對方，卻從未在同一時間相愛過。"
+    },
+    {
+      "s": "星群",
+      "t": "姜萊，我用被懲罰的幾年，百分百確定也驗證了我對你的喜歡，不是一時半會的心血來潮，是越來越確定的心之所向。你是偏愛，是例外，是首選，也是唯一。\n\n我想告訴你，從前的完治不配擁有莉香的愛。如果你願意再給我一次機會，現在的完治，肯定和莉香很合適。"
+    }
+  ],
+  "姜萊_李天樂": [
+    {
+      "s": "姜萊",
+      "t": "李天樂，對不起。\n\n比起你，我好像自私很多。我沒有了解過你到底是個怎樣的人，你過去的經歷，你的遭遇，你過得快樂與否，我好像從沒有對你好奇，也沒有那種恨不得在某一刻把自己二十幾年的人生，濃縮成一部電影講給你聽的衝動。\n\n所以後來你開口要結束這段關係時，我反而感受到一種莫名的輕鬆。可能我的確不是一個好的戀人吧。\n\n我從沒意識到我也在無可避免地傷害著別人，故意也好，無心也罷，甚至有時是用我曾經受過傷害的方式。可當我意識到這一點的時候，我再反省和道歉都是沒有意義的，我從前厭惡星群，而我變成了星群。\n\n你對我那麼好，我卻從來沒有對等地回報你的愛。"
+    },
+    {
+      "s": "李天樂",
+      "t": "姜萊，有人對你好是因為你值得，不是因為要你還他什麼。這世上沒有一樣情分能還清，愛情裡就注定彼此相欠，虧欠是愛的方式和特權。\n\n我從不為發生的事而後悔，我永遠毫不遲疑地向前看。\n\n或許我認識你的時機不是那麼剛好，我甚至偶爾有點後悔，明明我的店門口也有一棵梧桐樹，如果你進的是咖啡廳而不是那家酒吧呢？或者明明就隔著一條街，明明很多次經過那間酒吧，我卻從來沒走進去過，如果我進去，是不是能早點認識你，或許我們之間就有另一種可能。\n\n這些話，我本來想慢慢爛在心裡，可我的確真切認真地愛過你。姜萊，我也想對你說對不起，我怪你放不下星群，介意你心裡一直有一個別人。可是我漸漸也意識到了，我們誰都有在對方身上投射一些別人的影子。我最喜愛的電影是《情書》，我一直覺得，在你和星群的故事裡，我是渡邊博子。"
+    },
+    {
+      "s": "姜萊",
+      "t": "而在你和杜綿的故事裡，你是藤井樹，我又何嘗不是渡邊博子。其實，你不用道歉，沒有誰是誰的替身，你只是喜歡同一類人，我們都被影響著，慢慢變成了記憶中喜歡那個人的樣子。"
+    }
+  ],
+  "李天樂_杜綿": [
+    {
+      "s": "杜綿",
+      "t": "所以，你也是真的喜歡我的對嗎？那為什麼你也從來不說呢？"
+    },
+    {
+      "s": "李天樂",
+      "t": "那時候的我不夠強大，給不了你任何東西，許不下任何承諾，自己也還一團糟。無論我多麽努力地奔向你，可從一開始，我其實就偏離了軌道。\n\n可是你有你的軌道，我明明知道你那麼艱難地在追逐你的夢想，愛一個人就像愛一隻鴿子，鴿子越飛我會越難過，但還是希望牠能越飛越高。我已經掉隊了，我不能阻擋你，我也經歷了很長時間才慢慢被迫接受我們之間已經錯過的事實。\n\n在遇見姜萊之前，我也認識過別的女孩，也曾經差一點就要確認關係了。但是那一瞬間我就在想，如果你突然回來了，我該怎麼辦？那一刻我才意識到，如果哪天你願意回來，我肯定是選你，那對那個女孩子來說實在是太不公平了。我不想也不忍心傷害她，所以最後還是拒絕了。\n\n可我以為失去了還可以回來，後來，我知道了我只會在原地等待，我的猶豫與顧慮讓我早就已經失去你了。"
+    },
+    {
+      "s": "杜綿",
+      "t": "李天樂，再見到你的一瞬間，我變得聽不見自己的呼吸。我們靜默而立，站著客客氣氣打招呼的那一刻，我真的特別想告訴你，我喜歡過你很久很久，久到我都不知道有多久了，我喜歡你。\n\n李天樂，我曾經以為我是《情書》裡的男藤井樹，我的暗戀無法宣之於口，現在我才明白，原來我也是女藤井樹。如果你也愛我，那麼在我們錯過的時間裡，我的猶豫不值得同情，你也是。"
+    }
+  ],
+  "劉白_周可一": [
+    {
+      "s": "劉白",
+      "t": "你後悔和我相遇嗎？"
+    },
+    {
+      "s": "周可一",
+      "t": "如果兩個人不可能有結局，相遇的意義是什麼？"
+    },
+    {
+      "s": "劉白",
+      "t": "什麼是結局？相愛就是結局。\n\n我們無法預測未來如何，但可以把握當下。任何事情也不是必須有結果才有意義。"
+    },
+    {
+      "s": "周可一",
+      "t": "不是的，結局才是最重要的。\n\n我小時候看過的電視劇裡都說相愛抵萬難，可我長大了才逐漸明白，有些問題就是解決不了的。\n\n如果某天你能真的懂我，我想要你知道，曾經有段時間，比起任何東西，我寧願你在我身邊；比起世上所有的誘惑，我寧願你在我身邊。"
+    },
+    {
+      "s": "劉白",
+      "t": "可你一次次地放棄我，我真很想問你，你真的愛過我嗎？"
+    },
+    {
+      "s": "周可一",
+      "t": "愛，當然愛。就是因為太愛，才會有期待，就會有愧疚。\n\n我很現實，我很自私，我也很惡劣，我無法自洽，更不知道如何拉自己一把。我這個人確實挺奇怪的，我可以理解我和你的戀愛為什麼不能善終了。我極度缺乏安全感，我的敏感需要陪伴，我好像不適合喜歡誰，我的口是心非一次次把我喜歡的人推開，我根本不會愛人。\n\n或許我們注定是不一樣的人。你有你的自由，我有我的束縛，我們彼此失去，這就是為什麼我們要相遇。"
+    }
+  ],
+  "星群_杜綿": [
+    {
+      "s": "星群",
+      "t": "你現在後悔來到這裡嗎？"
+    },
+    {
+      "s": "杜綿",
+      "t": "不後悔。你呢？"
+    },
+    {
+      "s": "星群",
+      "t": "我也不後悔。如果你沒有得到一個好結果呢？"
+    },
+    {
+      "s": "杜綿",
+      "t": "我也不知道我期待的好結果究竟是什麼。十年聽起來很長，但其實風一吹就只剩下回憶了，時間會沖淡一切，原本以為念念不忘的人和事也許在記憶的偏差裡也會漸行漸遠。\n\n或許年少時的感情對於大多數男人而言，都是一段不會回頭的旅程吧。"
+    },
+    {
+      "s": "星群",
+      "t": "如果我們都失敗了，希望你最後找到的人是你自己。或許時間從來都不是記憶的對手，無悔就行。"
+    },
+    {
+      "s": "杜綿",
+      "t": "那我祝你成功。"
+    },
+    {
+      "s": "星群",
+      "t": "不管結局如何，我請你喝酒。"
+    }
+  ],
+  "姜萊_杜綿": [
+    {
+      "s": "姜萊",
+      "t": "我曾經以為李天樂對我是一見鐘情，我也一直相信，現在我才知道，他的一見鐘情也是有原因的，他或許只是把對你的虧欠都補償到了我身上。"
+    },
+    {
+      "s": "杜綿",
+      "t": "我們好像都從來沒有真正了解過李天樂。瞭解他的喜好厭惡、他的秉性脾氣、他所有過去的經歷，甚至是他的家庭、他的家人。其實他才是最可憐的人，愛他的人丟下他，而他選擇的人，並不愛他。"
+    },
+    {
+      "s": "姜萊",
+      "t": "你相信嗎，我曾經已經決定去愛李天樂了。"
+    },
+    {
+      "s": "杜綿",
+      "t": "姜萊，我們不是靠意志和決定而愛上一個人的。\n\n愛不是決定要去愛，愛是不由自主的。不是「我決定愛上他」，也不是「我會努力愛上他」，也不是「我能愛」，而是，「我不能不愛」。"
+    },
+    {
+      "s": "姜萊",
+      "t": "誰的心裡都可能曾經有一個放不下的人，我和他都曾透過對方看到過另一個人。我跟他都該愧疚，愛情，是屬於勇敢者的，我們都不勇敢。"
+    },
+    {
+      "s": "杜綿",
+      "t": "可是你忘了，姜萊，不止對李天樂，這對星群也同樣不公平，你該問問你自己的心，你到底要的是什麼，你到底愛誰？如果你像星群一樣後知後覺，發現自己愛上了李天樂，那麼我祝福你。\n\n他真的很好，即使自己也經受過苦難還是努力對這個世界溫暖，我愛他，拋開所有男女之間的悸動，我依然愛他，所以我同樣希望他幸福，即使那個人不是我。\n\n可如果你愛星群，那我希望你不要逃避地做出你的選擇，不要用李天樂來迴避正視你自己的情感。"
+    }
+  ],
+  "周可一_杜綿": [
+    {
+      "s": "周可一",
+      "t": "你挺勇敢的，我很羨慕你。愛情是屬於勇敢者的。"
+    },
+    {
+      "s": "杜綿",
+      "t": "我比你想得懦弱得多，我的勇敢是後知後覺的，人都沒有上帝視角，我也無法確定對方的心意，我也害怕自己是自作多情。\n\n其實我覺得，我跟你是一樣的人，任何事情總會想得特別多，我們總在擔憂、總在自尊心作祟，擔憂著失去愛的當下，其實我們都沒有在好好愛。"
+    },
+    {
+      "s": "周可一",
+      "t": "你說得對，可是好好愛也會沒有結果的，人終究還是活在凡塵俗世的，誰又能逃得過一個結果呢？"
+    },
+    {
+      "s": "杜綿",
+      "t": "那你就把每一天當成最後一天，把當下的戀愛談好，感受愛的這一刻。那麼不管未來如何，你們曾經那麼熾熱地愛過，就夠了，否則會像我一樣後悔。其實劉白考慮的地方不比你少，他知道你們有很多地方不合適，可他還是選擇緊握你的手，為什麼你不再努力一次，就非要證明給他看你們走不下去呢？你真的要再一次拋下他嗎？"
+    }
+  ],
+  "周可一_星群": [
+    {
+      "s": "周可一",
+      "t": "星群，對不起，你的投資，短期內很難拿回來了。"
+    },
+    {
+      "s": "星群",
+      "t": "你的憂鬱症⋯⋯"
+    },
+    {
+      "s": "周可一",
+      "t": "在吃藥。"
+    },
+    {
+      "s": "星群",
+      "t": "周可一，這下你是真的有病了。你要記住這個世界沒有不帶傷的人，無論什麼時候，你都要相信，真正能治癒自己的，只有自己。所以不管你遭遇了什麼，都請你接納全部的自己。\n\n有什麼大不了的，未來能有多艱難？俱樂部虧就虧了，大不了我把酒吧賣了給你支撐。"
+    },
+    {
+      "s": "周可一",
+      "t": "你沒有酒能活嗎？"
+    },
+    {
+      "s": "星群",
+      "t": "我有姜萊就夠了。你說你怎麼偏偏跟我一個德行呢？"
+    },
+    {
+      "s": "周可一",
+      "t": "星群，要說攤開自己內心的傷痕，說出自己一切的想法，真的好難，我也討厭自己，卻又無能為力。"
+    },
+    {
+      "s": "星群",
+      "t": "那你和劉白的感情你到底又在怕什麼呢？"
+    },
+    {
+      "s": "周可一",
+      "t": "我不怕等，我也不怕愛錯人，但我怕一條一眼望不到盡頭的路，我不知道自己該不該走下去。我知道自己是敏感脆弱的，總是會一遍遍地去想我和他有沒有結局，我才能擁有安全感，失去比擁有更踏實。我知道我很卑劣，我權衡利弊，我被現實左右，可我已經29歲了，我沒時間拉扯了。"
+    },
+    {
+      "s": "星群",
+      "t": "其實權衡利弊是很正常的事情，沒必要一直指責自己。如果你覺得和劉白在一起需要你自己聲嘶力竭地和全世界對抗，那麼就算了。\n\n但如果你愛他，他也依舊愛你，那麼我告訴你，雖然我的經驗很失敗，但一段愛情不分手其實很簡單，兩個人都放下情緒，坦誠一些，相信對方可以陪你一起找到解決的方法。這才是更需要勇氣的選擇。"
+    },
+    {
+      "s": "周可一",
+      "t": "那你呢，你想明白自己想要什麼了嗎？"
+    },
+    {
+      "s": "星群",
+      "t": "在遇見姜萊之前，任何人都覺得我總是給人不遠不近、有距離的感覺，而姜萊是最靠近過我的人。我要的很簡單，我要姜萊，比起任何人，我都更需要她。"
+    },
+    {
+      "s": "周可一",
+      "t": "那麼，你就該盡全力，讓你自己盡可能地值得被她喜歡。"
+    },
+    {
+      "s": "星群",
+      "t": "如果她肯回頭，我什麼都願意。"
+    }
+  ],
+  "周可一_姜萊": [
+    {
+      "s": "周可一",
+      "t": "姜萊，你還記得星群生日的那天嗎？其實那天，我們從酒吧出來的時候，他就已經看到了你。你在路口坐了多久，他就在你身後不遠的地方看了你多久。那晚他自己一個人去了海邊，吹了一夜的海風，待到天亮才回去。\n\n那時我不理解他為什麼這麼糾結、為什麼推開你，我當時說他有病，他說他知道。直到現在我才明白，我跟他這樣的人，注定都是這樣的性格，可我在他身邊看得清清楚楚，他愛你，那麼你呢，你還愛星群嗎？"
+    },
+    {
+      "s": "姜萊",
+      "t": "他以前總是讓我覺得不遠不近，充滿了距離感，哪怕竭盡全力，好像都沒有真正靠近過他。我會單曲循環一首歌，直到聽膩為止。我會經常去同一家餐廳，直到吃膩為止。我會偏執地喜歡一個人，直到他不值得。\n\n後來，與其說是不愛，不如說是我想要放過自己了。\n\n可現在，我也開始看不清自己的心，我知道星群對我是一道坎。但我自己甚至也不知道自己有沒有邁過去。"
+    },
+    {
+      "s": "周可一",
+      "t": "那你愛李天樂嗎？"
+    },
+    {
+      "s": "姜萊",
+      "t": "我也不知道，對於李天樂，談愛，我甚至覺得自己很卑鄙。"
+    },
+    {
+      "s": "周可一",
+      "t": "姜萊，作為星群的朋友，我希望你能給他一次機會，我比誰都知道，你是全世界最適合星群的人，我也比誰都知道，他真的很需要你。"
+    }
+  ],
+  "劉白_李天樂": [
+    {
+      "s": "劉白",
+      "t": "你對杜綿，現在是什麼樣的感情呢？"
+    },
+    {
+      "s": "李天樂",
+      "t": "我也說不清楚。我一直在想，如果當初的自己能夠更有勇氣一點。是不是我跟她就不會白白錯過。但一切都沒有如果，就像我們都只會原地等待，我的猶豫與顧慮讓我早就已經失去她了。\n\n有人說，人永遠不能同時擁有青春和對青春的感受。很多事情都是失去了才發現很重要，把握當下才是最正確的，或許離別久了，已經不適合重逢了。"
+    },
+    {
+      "s": "劉白",
+      "t": "但愛情，不是像下雨打把傘就能躲開的，每個人的相遇、重逢都不是巧合。人和人的緣分，不是一場不出門就可以避開的雨，該遇見時，總會遇見。該回來時，也總會回來的。\n\n她在倫敦過得並不如意，被搶包的那次，那麼危險她都沒有放開那個破舊的包，我一直不明白。後來發現有你存在的時候，我才知道，她不鬆手，是因為那個包裡有你手寫送給她的那份地圖。\n\n李天樂，她的喜歡一定超過你，勇氣也是，而你只是一個膽小鬼。"
+    }
+  ],
+  "周可一_李天樂": [
+    {
+      "s": "李天樂",
+      "t": "我們兩個好像並沒有什麼需要聊的。"
+    },
+    {
+      "s": "周可一",
+      "t": "如果要談點什麼，那我問你一個問題：如果你注定跟一個人沒結果，而你又特別喜歡這個人，你是要過程還是轉身就走？"
+    },
+    {
+      "s": "李天樂",
+      "t": "你得先想明白你想要什麼結果？什麼叫結果？\n\n太過在意反而適得其反，也許路的盡頭是什麼從來都不重要。人生在世，無論你活成什麼樣子，都會有人對你指指點點。所以永遠不要被別人的眼光牽絆，自己的心意才是最重要的。"
+    },
+    {
+      "s": "周可一",
+      "t": "那麼你自己的心意呢？兩段感情，先後順序，你的問題比我的難，我回答不了。\n\n看清楚自己的心，再做選擇吧，別辜負任何一個勇敢的人。"
+    }
+  ],
+  "星群_李天樂": [
+    {
+      "s": "星群",
+      "t": "如果你了解曾經的姜萊，你就知道，現在的姜萊根本不是她自己。可你喜歡上的姜萊，卻是一個很像杜綿的姜萊，你在她的身上是否投射過杜綿的影子，只有你自己心裡才能分辨清楚了。"
+    },
+    {
+      "s": "李天樂",
+      "t": "星群，我們誰也別用一種自虐的方式製造出痴情的假象，也別站在感情的道德制高點上。\n\n我曾經也跟你是同一種人，懦弱逃避，但其實這樣的自我感動的情感，是沒人能承載這一切的。\n\n我曾經就想，如果有一天遇到你，我真的好想告訴你，我們兩個都是失敗者，可你更不如我。什麼都買不到那個愛你的女孩仰著頭看你時閃爍在眼眸裡的光。"
+    },
+    {
+      "s": "星群",
+      "t": "所以我想明白了，我回來了，我們就誰都別選擇迴避，總要做出選擇。"
+    },
+    {
+      "s": "李天樂",
+      "t": "可是星群，《東京愛情故事》裡，完治有自己的關口里美，莉香現在也有她的。"
+    }
+  ],
+  "劉白_姜萊": [
+    {
+      "s": "劉白",
+      "t": "星群跟我說過一句話，他說愛不是尋找一個完美的人，而是學會理解和認同，懂得付出和包容，以及必要的尊重，愛是用完美的眼光，去欣賞那個並不完美的人。他說理解是愛的同義詞。周可一不完美，星群也同樣是，所以，你會選他嗎？"
+    },
+    {
+      "s": "姜萊",
+      "t": "選擇是一件很容易做的事嗎？那麼你的選擇又是什麼？"
+    },
+    {
+      "s": "劉白",
+      "t": "有什麼好糾結的？愛誰就選誰，這不是最簡單的事嗎？既然放不下，索性放下所有的體面和尊嚴，選擇不顧一切地去愛，直到愛意耗盡。"
+    },
+    {
+      "s": "姜萊",
+      "t": "你不會覺得這樣太卑微了嗎？"
+    },
+    {
+      "s": "劉白",
+      "t": "我覺得你們這些人都好奇怪，想的總比做的多。這不是卑微，也不是傻，這是敢於重新再來一次的勇氣。\n\n人生這道選擇題怎麼選都會有遺憾，那就選自己心裡閉眼第一時間想到的那個人就行了。"
+    },
+    {
+      "s": "姜萊",
+      "t": "緣分的事情，誰能說得清楚。我曾經就讓自己卑微到塵埃裡，一次又一次地放下自己的尊嚴。或許不需要耗盡愛意，其實人與人之間在相遇的那一刻，緣分就耗盡了。"
+    },
+    {
+      "s": "劉白",
+      "t": "我不相信緣分，我只信事在人為。"
+    }
+  ],
+  "劉白_杜綿": [
+    {
+      "s": "杜綿",
+      "t": "劉白，該抓住的時候盡全力抓住才行，別像我一樣總是在錯過。不要被動，不要羞於先開口挽回，好像誰先開口誰就輸了一樣。愛情裡面沒有輸贏，勝利者也是輸家。所以，不妨主動一點，愛都是有賞味期限的。"
+    },
+    {
+      "s": "劉白",
+      "t": "我不確定什麼是愛的賞味期，也不確定什麼才叫愛，我只知道我願意陪著她，我今天願意為她做的事情明天依舊願意做，我只希望她別再放棄。或許以後某一天我會嘲笑自己此時的天真吧，但我不會後悔此時此刻的決絕，哪怕所有人都認為它是愚蠢的。"
+    },
+    {
+      "s": "杜綿",
+      "t": "那就祝我們倆，都能有不留遺憾的結局。"
+    },
+    {
+      "s": "劉白",
+      "t": "可是，杜綿，我希望你記住，你身後還有一個Daniel（丹尼爾）。有時候回頭看看身邊的人，也未嘗不可啊。"
+    }
+  ],
+  "劉白_星群": [
+    {
+      "s": "星群",
+      "t": "我一直覺得，外表上看起來你比周可一小，但實際上你比她成熟。"
+    },
+    {
+      "s": "劉白",
+      "t": "所有人都覺得我幼稚，只有你說我成熟。"
+    },
+    {
+      "s": "星群",
+      "t": "你的成熟是打破現實的另一種高度，我和周可一都被困在俗世太久了，反而更需要你這樣的成熟，以我對她的了解，她對你是真心的愛。"
+    },
+    {
+      "s": "劉白",
+      "t": "其實我不是成熟，抑或者說我不是脫離了現實的人，我只是好奇那些活在現實裡的人他們的選擇就一定是對的嗎？\n\n或許我無法成人的標誌，是我像小孩子一樣，固執地認為一定有比現實更重要的東西，或者說沒有什麼不能改變的現實。\n\n如果必須要我接受那套現實的價值觀，那麼我寧可永遠都這麼幼稚。"
+    }
+  ]
+};
+
+const MOON_PHASES = [
+  { key: 'waxing', emoji: '🌙', name: '上弦月' },
+  { key: 'full',   emoji: '🌕', name: '滿月' },
+  { key: 'waning', emoji: '🌗', name: '下弦月' },
+];
+
+let moonPartyRound = 1;
+let myMoonChoice = null;
+let moonUnsubscribe = null;
+
+function showMoonPartyScreen(state) {
+  moonPartyRound = state.mpRound || 1;
+  showScreen('screen-moonparty');
+  // Listen to moon selections live
+  if (moonUnsubscribe) moonUnsubscribe();
+  moonUnsubscribe = onValue(ref(db, `moonParty/round${moonPartyRound}`), (snap) => {
+    const selections = snap.val() || {};
+    // Restore my choice if I had one
+    if (!myMoonChoice) {
+      Object.entries(selections).forEach(([phase, players]) => {
+        if (players && players[myChar]) myMoonChoice = phase;
+      });
+    }
+    renderMoonOptions(selections);
+  });
+}
+
+function renderMoonOptions(selections) {
+  const container = document.getElementById('moonOptions');
+  container.innerHTML = '';
+  MOON_PHASES.forEach(phase => {
+    const players = selections[phase.key] || {};
+    const count = Object.keys(players).filter(k => players[k]).length;
+    const isMine = myMoonChoice === phase.key;
+    const isFull = count >= 2 && !isMine;
+
+    const div = document.createElement('div');
+    div.className = 'moon-option' + (isMine ? ' mine' : '') + (isFull ? ' full' : '');
+
+    let tagHTML = '';
+    if (isMine) tagHTML = '<span class="moon-tag">已選擇</span>';
+    else if (isFull) tagHTML = '<span class="moon-tag">已額滿</span>';
+
+    div.innerHTML = `
+      <div class="moon-emoji">${phase.emoji}</div>
+      <div class="moon-info">
+        <div class="moon-name">${phase.name}</div>
+        <div class="moon-count">${count} / 2 人</div>
+      </div>
+      ${tagHTML}
+    `;
+
+    if (!isMine && !isFull) {
+      div.onclick = () => chooseMoonPhase(phase.key, phase.name);
+    } else if (isFull && !isMine) {
+      div.onclick = () => showToast('此房間已額滿，請選擇其他房間');
+    }
+    container.appendChild(div);
+  });
+}
+
+async function chooseMoonPhase(phaseKey, phaseName) {
+  if (!confirm(`確定選擇「${phaseName}」嗎？`)) return;
+
+  // Check capacity again before saving
+  const snap = await get(ref(db, `moonParty/round${moonPartyRound}/${phaseKey}`));
+  const existing = snap.exists() ? snap.val() : {};
+  const count = Object.keys(existing).filter(k => existing[k]).length;
+  if (count >= 2) {
+    showToast('此房間已額滿，請選擇其他房間');
+    return;
+  }
+
+  // Remove previous choice if any
+  if (myMoonChoice && myMoonChoice !== phaseKey) {
+    await set(ref(db, `moonParty/round${moonPartyRound}/${myMoonChoice}/${myChar}`), null);
+  }
+
+  myMoonChoice = phaseKey;
+  await set(ref(db, `moonParty/round${moonPartyRound}/${phaseKey}/${myChar}`), true);
+  showToast(`已選擇 ${phaseName}`);
+}
+
+async function showDialogueScreen(state) {
+  const phase = state.mpRevealPhase;
+  const round = state.mpRound || 1;
+
+  // Find my roommate
+  const snap = await get(ref(db, `moonParty/round${round}/${phase}`));
+  const players = snap.exists() ? snap.val() : {};
+  const roommates = Object.keys(players).filter(k => players[k]);
+
+  if (roommates.length < 2 || !roommates.includes(myChar)) {
+    // I'm not in this room, stay on moon party screen
+    return;
+  }
+
+  const partner = roommates.find(r => r !== myChar);
+  const key = [myChar, partner].sort().join('_');
+  const dialogue = DIALOGUES[key];
+
+  const moonPhase = MOON_PHASES.find(m => m.key === phase);
+  showScreen('screen-dialogue');
+  document.getElementById('dialogueMoon').textContent = moonPhase ? moonPhase.emoji : '🌕';
+  document.getElementById('dialogueTitle').textContent = `${myChar}  ×  ${partner}`;
+
+  const scroll = document.getElementById('dialogueScroll');
+  if (!dialogue) {
+    scroll.innerHTML = '<div style="text-align:center;color:var(--silver);padding:40px;">小劇場準備中...</div>';
+    return;
+  }
+
+  scroll.innerHTML = '';
+  dialogue.forEach((line, i) => {
+    const isMe = line.s === myChar;
+    const div = document.createElement('div');
+    div.className = 'dialogue-bubble' + (isMe ? ' is-me' : '');
+    div.style.animationDelay = (i * 0.08) + 's';
+    div.innerHTML = `<div class="db-speaker">【${line.s}】</div><div class="db-text">${line.t.replace(/\n/g, '<br><br>')}</div>`;
+    scroll.appendChild(div);
   });
 }
 

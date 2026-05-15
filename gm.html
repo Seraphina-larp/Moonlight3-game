@@ -132,6 +132,23 @@
     <div class="divider"></div>
 
     <div class="ctrl-section">
+      <div class="ctrl-label">滿月派對</div>
+      <div style="margin-bottom:10px;">
+        <button class="btn btn-outline" onclick="startMoonParty(1)">開始 第一局</button>
+        <button class="btn btn-outline" onclick="startMoonParty(2)">開始 第二局</button>
+        <button class="btn btn-outline" onclick="startMoonParty(3)">開始 第三局</button>
+      </div>
+      <div style="font-size:11px;color:var(--silver);letter-spacing:2px;margin-bottom:8px;">公布房間（開啟小劇場）</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-gold" onclick="revealMoonRoom('waxing')">🌙 上弦月</button>
+        <button class="btn btn-gold" onclick="revealMoonRoom('full')">🌕 滿月</button>
+        <button class="btn btn-gold" onclick="revealMoonRoom('waning')">🌗 下弦月</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="ctrl-section">
       <div class="ctrl-label" style="color:var(--red)">危險操作</div>
       <button class="btn btn-red" onclick="closeAndReset()">🚪 關閉並重置遊戲</button>
     </div>
@@ -159,6 +176,24 @@
       <div style="flex:1;min-width:200px;">
         <div style="font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;">第三次</div>
         <table class="scores-table" id="lcTable3"><thead><tr><th>角色</th><th>選擇</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel full-panel" id="mpPanel" style="display:none;">
+    <div class="panel-title">滿月派對 · 即時選擇</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:13px;margin-bottom:8px;">🌙 上弦月</div>
+        <div id="mpList_waxing" style="font-size:12px;color:var(--silver);"></div>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:13px;margin-bottom:8px;">🌕 滿月</div>
+        <div id="mpList_full" style="font-size:12px;color:var(--silver);"></div>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:13px;margin-bottom:8px;">🌗 下弦月</div>
+        <div id="mpList_waning" style="font-size:12px;color:var(--silver);"></div>
       </div>
     </div>
   </div>
@@ -344,6 +379,58 @@ const CHARS_ORDER = ['姜萊','李天樂','周可一','劉白','星群','杜綿'
       tbody.appendChild(tr);
     });
   });
+});
+
+// ===== MOON PARTY GM =====
+let currentMpRound = 1;
+
+window.startMoonParty = async (round) => {
+  currentMpRound = round;
+  await set(ref(db,'gameState'), {
+    chapter: 'ch3_moonparty',
+    phase: 'moonparty',
+    mpRound: round,
+    mpRevealPhase: null,
+    locked: false,
+  });
+  document.getElementById('mpPanel').style.display = 'block';
+  addLog(`開始滿月派對 第${round}局`);
+};
+
+window.revealMoonRoom = async (phase) => {
+  const labels = { waxing:'上弦月', full:'滿月', waning:'下弦月' };
+  await update(ref(db,'gameState'), {
+    phase: 'moonparty_reveal',
+    mpRevealPhase: phase,
+  });
+  addLog(`公布房間：${labels[phase]}`);
+};
+
+// Listen to moon party selections
+['waxing','full','waning'].forEach(phase => {
+  onValue(ref(db, `moonParty/round${currentMpRound}/${phase}`), () => refreshMpLists());
+});
+
+function refreshMpLists() {
+  ['waxing','full','waning'].forEach(phase => {
+    get(ref(db, `moonParty/round${currentMpRound}/${phase}`)).then(snap => {
+      const players = snap.exists() ? snap.val() : {};
+      const names = Object.keys(players).filter(k => players[k]);
+      const el = document.getElementById('mpList_' + phase);
+      if (el) el.innerHTML = names.length
+        ? names.map(n => `<div style="padding:3px 0;color:var(--gold-light);">${n}</div>`).join('')
+        : '<div style="opacity:0.4;">—</div>';
+    });
+  });
+}
+
+// Re-listen when round changes
+onValue(ref(db,'gameState/mpRound'), (snap) => {
+  const r = snap.val();
+  if (r && r !== currentMpRound) {
+    currentMpRound = r;
+    refreshMpLists();
+  }
 });
 
 window.closeAndReset = async () => {
