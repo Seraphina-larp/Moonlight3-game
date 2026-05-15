@@ -106,6 +106,48 @@
   .rc-score-sub { font-size:11px; color:rgba(168,192,214,0.5); letter-spacing:2px; margin-top:4px; }
   .rc-vs { font-size:28px; color:rgba(201,168,76,0.4); flex-shrink:0; }
 
+  /* Love choice screen */
+  .choice-btns { display:flex; flex-direction:column; align-items:center; gap:16px; margin:40px 0; }
+  .choice-btn {
+    width: 260px; padding: 20px 0;
+    border-radius: 50px; border: none; cursor: pointer;
+    font-family: 'Noto Serif TC', serif; font-size: 20px; letter-spacing: 6px;
+    transition: all 0.3s;
+  }
+  .choice-btn.stay {
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: var(--deep-blue); font-weight: 600;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.4);
+  }
+  .choice-btn.stay:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(201,168,76,0.6); }
+  .choice-btn.leave {
+    background: transparent;
+    border: 2px solid rgba(248,113,113,0.6);
+    color: #f87171;
+  }
+  .choice-btn.leave:hover { background: rgba(248,113,113,0.1); transform: translateY(-3px); }
+
+  /* Love choice result */
+  .lc-result-list { padding: 20px; max-width: 500px; margin: 0 auto; }
+  .lc-result-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; margin-bottom: 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    border-left: 3px solid transparent;
+    animation: fadeIn 0.6s ease both;
+  }
+  .lc-result-item.stay { border-left-color: var(--gold); }
+  .lc-result-item.leave { border-left-color: #f87171; }
+  .lc-result-item img { width: 44px; height: 58px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+  .lc-result-item .lri-name { font-size: 16px; letter-spacing: 3px; color: var(--white); }
+  .lc-result-item .lri-choice {
+    margin-left: auto; font-size: 14px; letter-spacing: 3px;
+    font-weight: 600;
+  }
+  .lc-result-item.stay .lri-choice { color: var(--gold-light); }
+  .lc-result-item.leave .lri-choice { color: #f87171; }
+
   /* ECG screen */
   .ecg-container { padding:20px; text-align:center; }
   .ecg-title { font-size:16px; letter-spacing:4px; color:var(--gold); margin-bottom:6px; }
@@ -124,7 +166,7 @@
 <body>
 <div id="app">
   <div class="title-header">
-    <div class="subtitle">That Beam of Moonlight III</div>
+    <div class="subtitle">沙拉嘿喲・戀愛實驗所</div>
     <h1>那 一 束 月 光 三</h1>
   </div>
 
@@ -164,6 +206,24 @@
   <!-- 公布：對方給我的分 -->
   <div id="screen-reveal" class="screen">
     <div class="reveal-container" id="revealContainer"></div>
+  </div>
+
+  <!-- 還能再愛嗎 選擇畫面 -->
+  <div id="screen-lovechoice" class="screen">
+    <div class="scoring-header">
+      <div class="moment-title" id="lovechoiceTitle">還能再愛嗎？</div>
+      <div class="moment-subtitle" id="lovechoiceRound"></div>
+    </div>
+    <div id="lovechoiceContent"></div>
+  </div>
+
+  <!-- 還能再愛嗎 公布畫面 -->
+  <div id="screen-lovechoice-result" class="screen">
+    <div class="scoring-header">
+      <div class="moment-title">還能再愛嗎？</div>
+      <div class="moment-subtitle" id="lovechoiceResultRound"></div>
+    </div>
+    <div id="lovechoiceResult"></div>
   </div>
 
   <!-- 心電圖（最終） -->
@@ -338,7 +398,6 @@ function handleGameState(state) {
   const revealedGroup = state.revealedGroup || null;
 
   if (phase === 'closed') {
-    // GM closed the game - force back to character select and clear session
     localStorage.removeItem('nl3_session');
     myChar = null; myPlayerName = ''; selectedChar = null;
     myScores = {}; hasSubmittedThisMoment = false;
@@ -350,16 +409,19 @@ function handleGameState(state) {
     showScreen('screen-waiting');
   } else if (phase === 'scoring') {
     currentMomentIndex = momentIndex;
-    // Check if submitted this moment - auto-restore from myScores
     const moment = MOMENTS[momentIndex];
     if (myScores[moment] !== undefined) hasSubmittedThisMoment = true;
     showScoringScreen(momentIndex, locked);
   } else if (phase === 'reveal') {
-    // Show partner's score to me for this moment
     showRevealScreen(state);
   } else if (phase === 'ecg') {
-    // Final ECG reveal
     showEcgScreen(revealedGroup, state);
+  } else if (phase === 'lovechoice') {
+    // Ch2: 還能再愛嗎 - voting
+    showLoveChoiceScreen(state);
+  } else if (phase === 'lovechoice_result') {
+    // Ch2: reveal all choices
+    showLoveChoiceResult(state);
   }
 }
 
@@ -517,6 +579,81 @@ function drawEcg() {
     ctx.fillStyle='rgba(240,208,128,0.9)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
     ctx.fillText(p.score,p.x,p.y-14);
   });
+}
+
+// ===== LOVE CHOICE (還能再愛嗎) =====
+const ROUND_LABELS = { 1: '第一次', 2: '第二次', 3: '第三次' };
+
+function showLoveChoiceScreen(state) {
+  const round = state.lcRound || 1;
+  const locked = state.locked || false;
+  showScreen('screen-lovechoice');
+  document.getElementById('lovechoiceTitle').textContent = '還能再愛嗎？';
+  document.getElementById('lovechoiceRound').textContent = ROUND_LABELS[round] + ' · 做出你的選擇';
+
+  const content = document.getElementById('lovechoiceContent');
+
+  // Check if already submitted this round
+  const myChoice = state.lcChoices && state.lcChoices[myChar];
+  if (myChoice || locked) {
+    content.innerHTML = `
+      <div class="submitted-state">
+        <div class="big-score" style="font-size:36px;letter-spacing:6px;">${myChoice === 'stay' ? '不 分 手' : myChoice === 'leave' ? '分 手' : '—'}</div>
+        <div class="submitted-label">已送出 · 等待主持人公布</div>
+      </div>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="choice-btns">
+      <button class="choice-btn stay" onclick="submitLoveChoice('stay', ${round})">不 分 手</button>
+      <button class="choice-btn leave" onclick="submitLoveChoice('leave', ${round})">分 手</button>
+    </div>`;
+}
+
+window.submitLoveChoice = async function(choice, round) {
+  const label = choice === 'stay' ? '不分手' : '分手';
+  if (!confirm(`確定選擇「${label}」嗎？`)) return;
+
+  // Save to Firebase under lcRound-specific key
+  await set(ref(db, `loveChoices/round${round}/${myChar}`), choice);
+
+  // Also update gameState lcChoices for live display
+  await update(ref(db, `gameState/lcChoices`), { [myChar]: choice });
+
+  const content = document.getElementById('lovechoiceContent');
+  content.innerHTML = `
+    <div class="submitted-state">
+      <div class="big-score" style="font-size:36px;letter-spacing:6px;">${label}</div>
+      <div class="submitted-label">已送出 · 等待主持人公布</div>
+    </div>`;
+  showToast('選擇已送出');
+};
+
+async function showLoveChoiceResult(state) {
+  const round = state.lcRound || 1;
+  const revealedGroup = state.revealedGroup || null;
+  showScreen('screen-lovechoice-result');
+  document.getElementById('lovechoiceResultRound').textContent = ROUND_LABELS[round];
+
+  // Fetch all choices for this round
+  const snap = await get(ref(db, `loveChoices/round${round}`));
+  const choices = snap.exists() ? snap.val() : {};
+
+  const ORDER = ['姜萊','李天樂','周可一','劉白','星群','杜綿'];
+  const result = document.getElementById('lovechoiceResult');
+  result.innerHTML = '<div class="lc-result-list">' +
+    ORDER.map((name, i) => {
+      const c = choices[name];
+      const label = c === 'stay' ? '不 分 手' : c === 'leave' ? '分 手' : '待定';
+      const cls = c === 'stay' ? 'stay' : c === 'leave' ? 'leave' : '';
+      return `<div class="lc-result-item ${cls}" style="animation-delay:${i*0.12}s">
+        <img src="${CHARACTERS[name].img}" alt="${name}">
+        <div class="lri-name">${name}</div>
+        <div class="lri-choice">${label}</div>
+      </div>`;
+    }).join('') +
+  '</div>';
 }
 
 // ===== HELPERS =====

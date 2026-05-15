@@ -113,6 +113,25 @@
     <div class="divider"></div>
 
     <div class="ctrl-section">
+      <div class="ctrl-label">第二章 · 還能再愛嗎？</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="startLoveChoice(1)">開始 第一次</button>
+        <button class="btn btn-outline" onclick="startLoveChoice(2)">開始 第二次</button>
+        <button class="btn btn-outline" onclick="startLoveChoice(3)">開始 第三次</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-gold" onclick="revealLoveChoice(1)">公布 第一次</button>
+        <button class="btn btn-gold" onclick="revealLoveChoice(2)">公布 第二次</button>
+        <button class="btn btn-gold" onclick="revealLoveChoice(3)">公布 第三次</button>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-red" id="lcLockBtn" onclick="toggleLcLock()">🔒 鎖定選擇</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="ctrl-section">
       <div class="ctrl-label" style="color:var(--red)">危險操作</div>
       <button class="btn btn-red" onclick="closeAndReset()">🚪 關閉並重置遊戲</button>
     </div>
@@ -124,6 +143,24 @@
       <thead><tr><th>角色</th><th style="text-align:center">初遇</th><th style="text-align:center">告白</th><th style="text-align:center">相愛</th><th style="text-align:center">分手</th><th style="text-align:center">此刻</th></tr></thead>
       <tbody id="scoresBody"></tbody>
     </table>
+  </div>
+
+  <div class="panel full-panel" id="lcPanel" style="display:none;">
+    <div class="panel-title">還能再愛嗎？· 即時選擇</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;">第一次</div>
+        <table class="scores-table" id="lcTable1"><thead><tr><th>角色</th><th>選擇</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;">第二次</div>
+        <table class="scores-table" id="lcTable2"><thead><tr><th>角色</th><th>選擇</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;">第三次</div>
+        <table class="scores-table" id="lcTable3"><thead><tr><th>角色</th><th>選擇</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
   </div>
 
   <div class="panel full-panel">
@@ -255,6 +292,60 @@ window.revealEcg = async (group) => {
   await update(ref(db,'gameState'), { phase:'ecg', revealedGroup:group });
   addLog(`公布心電圖 [${labels[group]}]`);
 };
+// ===== LOVE CHOICE GM CONTROLS =====
+let lcIsLocked = false;
+let currentLcRound = 1;
+
+window.startLoveChoice = async (round) => {
+  currentLcRound = round;
+  lcIsLocked = false;
+  await set(ref(db,'gameState'), {
+    chapter: 'ch2_lovechoice',
+    phase: 'lovechoice',
+    lcRound: round,
+    locked: false,
+    lcChoices: {}
+  });
+  document.getElementById('lcPanel').style.display = 'block';
+  document.getElementById('lcLockBtn').textContent = '🔒 鎖定選擇';
+  addLog(`開始「還能再愛嗎？」第${round === 1 ? '一' : round === 2 ? '二' : '三'}次`);
+};
+
+window.revealLoveChoice = async (round) => {
+  await update(ref(db,'gameState'), {
+    phase: 'lovechoice_result',
+    lcRound: round,
+    locked: true
+  });
+  addLog(`公布「還能再愛嗎？」第${round === 1 ? '一' : round === 2 ? '二' : '三'}次結果`);
+};
+
+window.toggleLcLock = async () => {
+  lcIsLocked = !lcIsLocked;
+  await update(ref(db,'gameState'), { locked: lcIsLocked });
+  document.getElementById('lcLockBtn').textContent = lcIsLocked ? '🔓 解除鎖定' : '🔒 鎖定選擇';
+  addLog(lcIsLocked ? '鎖定選擇' : '解除鎖定');
+};
+
+// Listen to loveChoices for all 3 rounds
+const CHARS_ORDER = ['姜萊','李天樂','周可一','劉白','星群','杜綿'];
+[1,2,3].forEach(round => {
+  onValue(ref(db, `loveChoices/round${round}`), (snap) => {
+    const choices = snap.val() || {};
+    const tbody = document.querySelector(`#lcTable${round} tbody`);
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    CHARS_ORDER.forEach(name => {
+      const c = choices[name];
+      const label = c === 'stay' ? '不分手' : c === 'leave' ? '分手' : '·';
+      const color = c === 'stay' ? 'var(--gold-light)' : c === 'leave' ? '#f87171' : 'rgba(255,255,255,0.2)';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${name}</td><td style="text-align:center;color:${color};font-weight:600;">${label}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+});
+
 window.closeAndReset = async () => {
   if (!confirm('確定要關閉遊戲？所有玩家將被強制退出，所有資料將清除。')) return;
   await set(ref(db,'gameState'), { phase: 'closed' });
