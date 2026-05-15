@@ -92,20 +92,19 @@
   .submitted-state .big-score { font-size:72px; color:var(--gold-light); letter-spacing:4px; }
   .submitted-state .submitted-label { font-size:12px; color:var(--silver); letter-spacing:4px; margin-top:8px; animation:pulse 2s infinite; }
 
-  /* Reveal screen - partner's score */
+  /* Reveal screen - compare both scores */
   .reveal-container { text-align:center; padding:40px 20px; animation:fadeIn 0.8s ease; }
   .reveal-label { font-size:12px; color:var(--silver); letter-spacing:4px; margin-bottom:8px; }
   .reveal-moment { font-size:16px; color:var(--gold); letter-spacing:4px; margin-bottom:30px; }
-  .reveal-pair { display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; margin-bottom:30px; }
-  .reveal-char { text-align:center; }
-  .reveal-char img { width:90px; height:120px; object-fit:cover; border-radius:8px; border:2px solid rgba(201,168,76,0.3); }
-  .reveal-char .rc-name { font-size:13px; color:var(--silver); letter-spacing:2px; margin-top:6px; }
-  .reveal-char.partner img { border-color:var(--gold); box-shadow:0 0 20px rgba(201,168,76,0.4); }
-  .reveal-char.partner .rc-name { color:var(--gold); }
-  .reveal-score-box { text-align:center; }
-  .reveal-score-box .rs-label { font-size:11px; color:var(--silver); letter-spacing:3px; margin-bottom:6px; }
-  .reveal-score-box .rs-number { font-size:80px; color:var(--gold-light); font-weight:300; letter-spacing:4px; text-shadow:0 0 40px rgba(240,208,128,0.6); line-height:1; }
-  .reveal-score-box .rs-sublabel { font-size:11px; color:rgba(168,192,214,0.6); letter-spacing:3px; margin-top:8px; }
+  .reveal-compare { display:flex; align-items:center; justify-content:center; gap:20px; flex-wrap:wrap; }
+  .rc-side { text-align:center; min-width:120px; }
+  .rc-side img { width:90px; height:120px; object-fit:cover; border-radius:8px; border:2px solid rgba(201,168,76,0.3); display:block; margin:0 auto 8px; }
+  .rc-name { font-size:14px; color:var(--gold); letter-spacing:2px; margin-bottom:4px; }
+  .rc-gave-label { font-size:10px; color:var(--silver); letter-spacing:2px; margin-bottom:6px; }
+  .rc-score { font-size:64px; color:var(--gold-light); font-weight:300; letter-spacing:2px; text-shadow:0 0 30px rgba(240,208,128,0.6); line-height:1; }
+  .rc-score.partner-score { color:#a8d8f0; text-shadow:0 0 30px rgba(168,216,240,0.6); }
+  .rc-score-sub { font-size:11px; color:rgba(168,192,214,0.5); letter-spacing:2px; margin-top:4px; }
+  .rc-vs { font-size:28px; color:rgba(201,168,76,0.4); flex-shrink:0; }
 
   /* ECG screen */
   .ecg-container { padding:20px; text-align:center; }
@@ -416,41 +415,43 @@ window.submitScore = async function() {
   showToast('評分已送出');
 };
 
-// ===== REVEAL SCREEN - show partner's score to me =====
+// ===== REVEAL SCREEN - show both scores =====
 async function showRevealScreen(state) {
   const myGroup = CHARACTERS[myChar].group;
   const revealedGroup = state.revealedGroup || null;
-  // If not my group yet, stay in scoring/waiting
   if (revealedGroup && revealedGroup !== 'all' && revealedGroup !== myGroup) {
-    // Stay on current screen (submitted state)
     return;
   }
   const momentIndex = state.momentIndex ?? currentMomentIndex;
   const moment = MOMENTS[momentIndex];
   const partner = PARTNERS[myChar];
 
-  // Fetch partner's score for me (partner's scores[moment])
+  // My score to partner
+  const myScore = myScores[moment] !== undefined ? myScores[moment] : null;
+  // Partner's score to me
   const snap = await get(ref(db, `players/${partner}/scores/${moment}`));
   const partnerScore = snap.exists() ? snap.val() : null;
 
   showScreen('screen-reveal');
   const container = document.getElementById('revealContainer');
   container.innerHTML = `
-    <div class="reveal-label">對方給你的評分</div>
+    <div class="reveal-label">互相評分對比</div>
     <div class="reveal-moment">${moment}</div>
-    <div class="reveal-pair">
-      <div class="reveal-char partner">
-        <img src="${CHARACTERS[partner].img}" alt="${partner}">
-        <div class="rc-name">${partner}</div>
-      </div>
-      <div class="reveal-score-box">
-        <div class="rs-label">給 ${myChar} 的分數</div>
-        <div class="rs-number">${partnerScore !== null ? partnerScore : '—'}</div>
-        <div class="rs-sublabel">/ 100</div>
-      </div>
-      <div class="reveal-char">
+    <div class="reveal-compare">
+      <div class="rc-side">
         <img src="${CHARACTERS[myChar].img}" alt="${myChar}">
         <div class="rc-name">${myChar}</div>
+        <div class="rc-gave-label">給 ${partner}</div>
+        <div class="rc-score">${myScore !== null ? myScore : '—'}</div>
+        <div class="rc-score-sub">/ 100</div>
+      </div>
+      <div class="rc-vs">↔</div>
+      <div class="rc-side">
+        <img src="${CHARACTERS[partner].img}" alt="${partner}">
+        <div class="rc-name">${partner}</div>
+        <div class="rc-gave-label">給 ${myChar}</div>
+        <div class="rc-score partner-score">${partnerScore !== null ? partnerScore : '—'}</div>
+        <div class="rc-score-sub">/ 100</div>
       </div>
     </div>
   `;
