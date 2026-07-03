@@ -2,8 +2,15 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>那一束月光三</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="那一束月光三">
+<meta name="theme-color" content="#0a0e2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="https://seraphina-larp.github.io/Moonlight3-game/zhoukeyi.jpg">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600&display=swap');
   :root {
@@ -511,47 +518,6 @@
     <div id="lovechoiceResult"></div>
   </div>
 
-  <!-- 最後的旅行 選擇 -->
-  <div id="screen-travel" class="screen">
-    <div class="travel-header">
-      <h2>最 後 的 旅 行</h2>
-      <p>做出你的選擇</p>
-    </div>
-    <div class="travel-options" id="travelOptions"></div>
-  </div>
-
-  <!-- 最後的旅行 文本 -->
-  <div id="screen-travel-text" class="screen">
-    <div class="travel-text-title">
-      <div class="tt-chapter">第六幕 · 最後的旅行</div>
-      <div class="tt-pair" id="travelPairTitle"></div>
-    </div>
-    <div class="travel-text-screen">
-      <div class="travel-text-body" id="travelTextBody"></div>
-    </div>
-  </div>
-
-  <!-- 最後的旅行 選擇畫面 -->
-  <div id="screen-journey" class="screen">
-    <div class="scoring-header">
-      <div class="moment-title">最後的旅行</div>
-      <div class="moment-subtitle">選擇你的旅伴</div>
-    </div>
-    <div class="journey-choice-screen" id="journeyChoiceContent"></div>
-  </div>
-
-  <!-- 最後的旅行 故事畫面 -->
-  <div id="screen-journey-story" class="screen">
-    <div class="journey-story-header">
-      <div class="journey-story-label">最後的旅行</div>
-      <div class="journey-story-pair" id="journeyStoryPair"></div>
-      <div class="journey-story-type" id="journeyStoryType"></div>
-    </div>
-    <div class="journey-story-scroll">
-      <div class="journey-story-text" id="journeyStoryText"></div>
-    </div>
-  </div>
-
   <!-- 最後的選擇 -->
   <div id="screen-final" class="screen">
     <div class="final-title">
@@ -632,7 +598,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, onValue, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_B6x6NowrBi14UHPsMmOz4XuSpRG2Ehg",
@@ -734,7 +700,28 @@ function enterGame() {
   document.getElementById('waitingCharName').textContent = myChar;
   showScreen('screen-waiting');
   startListening();
+  setupPresence();
+  requestWakeLock();
 }
+
+// ===== 上線狀態（防止切 App 被誤判離線）=====
+function setupPresence() {
+  if (!myChar) return;
+  update(ref(db, `players/${myChar}`), { online: true });
+  try { onDisconnect(ref(db, `players/${myChar}/online`)).set(false); } catch(e){}
+}
+
+// ===== 螢幕保持喚醒 =====
+let wakeLock = null;
+async function requestWakeLock() {
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    requestWakeLock();
+    if (myChar) update(ref(db, `players/${myChar}`), { online: true }); // 切回前景重新標記上線
+  }
+});
 
 // ===== LISTENERS =====
 function startListening() {
@@ -784,7 +771,10 @@ function handleGameState(state) {
 
   if (phase === 'closed') {
     localStorage.removeItem('nl3_session');
+    if (moonUnsubscribe) { moonUnsubscribe(); moonUnsubscribe = null; }
     myChar = null; myPlayerName = ''; selectedChar = null; myScores = {};
+    myMoonChoice = null; moonPartyRound = 1; myJourneyChoice = null; myFinalChoice = null;
+    myLcChoice = {}; hasSubmittedThisMoment = false; currentMomentIndex = -1; _lastMomentForReset = -1;
     initCharGrid(); showScreen('screen-select'); showToast('主持人已關閉遊戲'); return;
   }
   if (phase === 'waiting') { showScreen('screen-waiting'); return; }
@@ -964,16 +954,18 @@ const MOON_PHASES = [
   { key:'waning', emoji:'🌗', name:'下弦月' },
 ];
 function showMoonPartyScreen(state) {
-  moonPartyRound = state.mpRound || 1;
+  const round = state.mpRound || 1;
+  if (round !== moonPartyRound) myMoonChoice = null; // 新的一局：清掉上一局的房間選擇
+  moonPartyRound = round;
   showScreen('screen-moonparty');
   if (moonUnsubscribe) moonUnsubscribe();
   moonUnsubscribe = onValue(ref(db, `moonParty/round${moonPartyRound}`), (snap) => {
     const selections = snap.val() || {};
-    if (!myMoonChoice) {
-      Object.entries(selections).forEach(([phase, players]) => {
-        if (players && players[myChar]) myMoonChoice = phase;
-      });
-    }
+    // 一律以 Firebase 為準重新判定我在哪個房間，避免殘留
+    myMoonChoice = null;
+    Object.entries(selections).forEach(([phase, players]) => {
+      if (players && players[myChar]) myMoonChoice = phase;
+    });
     renderMoonOptions(selections);
   });
 }
@@ -1006,20 +998,33 @@ async function chooseMoonPhase(phaseKey, phaseName) {
   showToast(`已選擇 ${phaseName}`);
 }
 async function showDialogueScreen(state) {
-  const phase = state.mpRevealPhase;
   const round = state.mpRound || 1;
-  const snap = await get(ref(db, `moonParty/round${round}/${phase}`));
-  const players = snap.exists() ? snap.val() : {};
-  const roommates = Object.keys(players).filter(k => players[k]);
-  if (roommates.length < 2 || !roommates.includes(myChar)) {
+  const revealed = Object.assign({}, state.mpRevealed || {});
+  if (state.mpRevealPhase) revealed[state.mpRevealPhase] = true; // 相容舊格式
+  const snap = await get(ref(db, `moonParty/round${round}`));
+  const rooms = snap.exists() ? snap.val() : {};
+  // 找出「我」在哪個房間
+  let myRoom = null;
+  Object.entries(rooms).forEach(([phase, players]) => {
+    if (players && players[myChar]) myRoom = phase;
+  });
+  // 我的房間還沒被公布 → 等待（不受其他房間公布影響）
+  if (!myRoom || !revealed[myRoom]) {
     showScreen('screen-waiting');
-    document.getElementById('waitingStatusText').textContent = '等待主持人公布房間結果...';
+    document.getElementById('waitingStatusText').textContent = '等待主持人公布你的房間...';
+    return;
+  }
+  const players = rooms[myRoom] || {};
+  const roommates = Object.keys(players).filter(k => players[k]);
+  if (roommates.length < 2) {
+    showScreen('screen-waiting');
+    document.getElementById('waitingStatusText').textContent = '你的房間只有你一人，等待主持人…';
     return;
   }
   const partner = roommates.find(r => r !== myChar);
   const key = [myChar, partner].sort().join('_');
   const dialogue = DIALOGUES[key];
-  const moonPhase = MOON_PHASES.find(m => m.key === phase);
+  const moonPhase = MOON_PHASES.find(m => m.key === myRoom);
   showScreen('screen-dialogue');
   document.getElementById('dialogueMoon').textContent = moonPhase ? moonPhase.emoji : '🌕';
   document.getElementById('dialogueTitle').textContent = `${myChar}  ×  ${partner}`;
@@ -1087,34 +1092,39 @@ async function showJourneyNarrative(state) {
   document.getElementById('journeyNarrativeBody').textContent = text || '文本準備中…';
 }
 function resolveJourneyKey(char, choices) {
+  // 姜萊(jl): 'lt'(和李天樂) / 'xq'(和星群)；李天樂(lt): 'jl'(和姜萊) / 'dm'(和杜綿)
+  // 杜綿固定→李天樂；星群固定→姜萊。四人結果只由 jl、lt 決定。
   const jl=choices['姜萊'], lt=choices['李天樂'], zky=choices['周可一'], lb=choices['劉白'];
-  const jlLtMutual=jl==='lt'&&lt==='jl', jlChoosesXq=jl==='xq', ltChoosesDm=lt==='dm';
+  // ── 周可一 × 劉白（獨立配對）──
   if (char==='周可一'||char==='劉白') {
-    const mutual=zky==='lb'&&lb==='zky';
-    const lbChoseZkyRejected=lb==='zky'&&zky!=='lb';
-    const zkyChoseLbRejected=zky==='lb'&&lb!=='zky';
-    if (mutual) return `zky_lb_mutual_${char}`;
-    if (lbChoseZkyRejected) return `lb_chose_zky_rejected_${char}`;
-    if (zkyChoseLbRejected) return `zky_chose_lb_rejected_${char}`;
-    return `both_reject_${char}`;
+    if (zky==='lb'&&lb==='zky') return `zky_lb_mutual_${char}`;          // 互選
+    if (lb==='zky'&&zky!=='lb') return `lb_chose_zky_rejected_${char}`; // 劉白選周可一，被拒
+    if (zky==='lb'&&lb!=='zky') return `zky_chose_lb_rejected_${char}`; // 周可一選劉白，被拒
+    return `both_reject_${char}`;                                       // 兩人都不去
   }
-  if (char==='星群') return jlChoosesXq?'jl_xq_mutual_星群':'jl_xq_forced_星群';
-  if (char==='杜綿') {
-    if (ltChoosesDm&&!jlLtMutual) return 'dm_lt_mutual_杜綿';
-    if (jlLtMutual) return 'dm_xq_forced_杜綿';
-    return 'dm_xq_forced_杜綿';
-  }
+  // ── 四人組：姜萊 / 李天樂 / 杜綿 / 星群 ──
+  const jlLt = (jl==='lt' && lt==='jl');  // 姜萊×李天樂互選
+  const ltDm = (lt==='dm');               // 李天樂×杜綿互選
+  const jlXq = (jl==='xq');               // 姜萊×星群互選
   if (char==='姜萊') {
-    if (jlLtMutual) return 'jl_lt_mutual_姜萊';
-    if (jl==='xq') return 'jl_xq_mutual_姜萊';
-    if (jl==='lt'&&lt==='dm') return 'jl_xq_forced_姜萊';
-    return 'jl_xq_forced_姜萊';
+    if (jlLt) return 'jl_lt_mutual_姜萊';
+    if (jlXq) return 'jl_xq_mutual_姜萊';
+    return 'jl_xq_forced_姜萊';            // 姜萊選李天樂但落空，與星群同行
   }
   if (char==='李天樂') {
-    if (jlLtMutual) return 'jl_lt_mutual_李天樂';
-    if (lt==='dm') return 'dm_lt_mutual_李天樂';
-    if (lt==='jl'&&jl==='xq') return 'dm_lt_forced_李天樂';
-    return 'dm_lt_forced_李天樂';
+    if (jlLt) return 'jl_lt_mutual_李天樂';
+    if (ltDm) return 'dm_lt_mutual_李天樂';
+    return 'dm_lt_forced_李天樂';          // 李天樂選姜萊但落空，與杜綿同行
+  }
+  if (char==='星群') {                     // 星群一心向姜萊
+    if (jlXq) return 'jl_xq_mutual_星群';  // 姜萊也選星群 → 互選
+    if (jlLt) return 'dm_xq_forced_星群';  // 姜萊李天樂互選 → 星群杜綿皆沒被選
+    return 'jl_xq_forced_星群';            // 姜萊選李天樂落空 → 姜萊星群沒互選但同行
+  }
+  if (char==='杜綿') {                     // 杜綿一心向李天樂
+    if (ltDm) return 'dm_lt_mutual_杜綿';  // 李天樂也選杜綿 → 互選
+    if (jlLt) return 'dm_xq_forced_杜綿';  // 姜萊李天樂互選 → 杜綿星群皆沒被選
+    return 'dm_lt_forced_杜綿';            // 李天樂選姜萊落空 → 李天樂杜綿沒互選但同行
   }
   return null;
 }
@@ -1201,10 +1211,8 @@ async function boot() {
   if (!resumed) showScreen('screen-select');
 }
 boot();
-
-window.addEventListener('beforeunload', () => {
-  if (myChar) update(ref(db, `players/${myChar}`), { online: false });
-});
+// 注意：不在 beforeunload/pagehide 標記離線——手機切換 App 會誤觸發，導致 GM 看到掉線、角色被釋放。
+// 真正斷線由 Firebase onDisconnect 處理；切回前景時 visibilitychange 會重新標記上線。
 </script>
 </body>
 </html>
