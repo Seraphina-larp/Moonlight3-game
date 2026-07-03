@@ -72,8 +72,8 @@
       <button class="btn btn-gold" onclick="startChapter1()">▶ 開始第一章</button>
     </div>
     <div class="ctrl-section">
-      <div class="ctrl-label">評分時刻控制</div>
-      <div class="moment-tabs">
+      <div class="ctrl-label">評分時刻（依序進行，不可跳關）</div>
+      <div class="moment-tabs" id="momentTabs">
         <button class="m-tab" onclick="openMoment(0)">初遇</button>
         <button class="m-tab" onclick="openMoment(1)">告白</button>
         <button class="m-tab" onclick="openMoment(2)">相愛</button>
@@ -83,8 +83,8 @@
       <button class="btn btn-red" id="lockBtn" onclick="toggleLock()">🔒 鎖定當前時刻</button>
     </div>
     <div class="ctrl-section">
-      <div class="ctrl-label">公布對方評分（逐組）</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div class="ctrl-label">① 鎖定後公布對方評分（逐組）</div>
+      <div id="ch1RevealGroup" style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-outline" onclick="revealScores('A')">周可一 × 劉白</button>
         <button class="btn btn-outline" onclick="revealScores('B')">李天樂 × 姜萊</button>
         <button class="btn btn-outline" onclick="revealScores('C')">星群 × 杜綿</button>
@@ -93,8 +93,12 @@
       <div class="flow-notice">玩家看到「對方給自己的分數」</div>
     </div>
     <div class="ctrl-section">
-      <div class="ctrl-label">最終公布心電圖</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div class="ctrl-label">② 公布後前往下一時刻</div>
+      <button class="btn btn-gold" id="nextMomentBtn" onclick="nextMoment()">▶ 下一時刻</button>
+    </div>
+    <div class="ctrl-section">
+      <div class="ctrl-label">③ 五個時刻全部公布後 → 最終心電圖</div>
+      <div id="ch1EcgGroup" style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-outline" onclick="revealEcg('A')">周可一 × 劉白</button>
         <button class="btn btn-outline" onclick="revealEcg('B')">李天樂 × 姜萊</button>
         <button class="btn btn-outline" onclick="revealEcg('C')">星群 × 杜綿</button>
@@ -263,6 +267,7 @@ let currentMomentIndex = 0;
 let journeyLocked = false;
 let finalLocked = false;
 let currentMpRound = 1;
+let maxRevealedMoment = -1;
 
 // ─── Status Grid ───
 function initStatusGrid() {
@@ -298,18 +303,21 @@ onValue(ref(db,'players'), (snap) => {
 onValue(ref(db,'gameState'), (snap) => {
   const s = snap.val() || {};
   const d = document.getElementById('currentStateDisplay');
+  // 同步第一章進度
+  if (typeof s.maxRevealedMoment === 'number') maxRevealedMoment = s.maxRevealedMoment;
+  if (typeof s.momentIndex === 'number') currentMomentIndex = s.momentIndex;
+  isLocked = s.locked || false;
   if (!s.phase || s.phase==='waiting') {
     d.innerHTML = '章節：<strong>等待開始</strong>';
   } else if (s.phase==='scoring') {
     const m = MOMENTS[s.momentIndex]||'?';
     const lk = s.locked ? '🔒 已鎖定' : '🔓 開放中';
     d.innerHTML = `章節：<strong>愛情的心電圖</strong> · 時刻：<strong>${m}</strong> · ${lk}`;
-    isLocked = s.locked||false;
-    currentMomentIndex = s.momentIndex??0;
     document.getElementById('lockBtn').textContent = isLocked ? '🔓 解除鎖定' : '🔒 鎖定當前時刻';
     document.querySelectorAll('.m-tab').forEach((t,i)=>t.classList.toggle('active',i===s.momentIndex));
   } else if (s.phase==='reveal') {
     d.innerHTML = `公布評分：<strong>${MOMENTS[s.momentIndex]||'?'}</strong>`;
+    document.querySelectorAll('.m-tab').forEach((t,i)=>t.classList.toggle('active',i===s.momentIndex));
   } else if (s.phase==='ecg') {
     d.innerHTML = `公布心電圖：<strong>${s.revealedGroup}</strong>`;
   } else if (s.phase==='lovechoice' || s.phase==='lovechoice_result') {
@@ -328,6 +336,8 @@ onValue(ref(db,'gameState'), (snap) => {
     d.innerHTML = `章節：<strong>最後的選擇</strong> · ${s.phase==='final_reveal'?'已公布結局':'選擇中'}`;
     document.getElementById('finalPanel').style.display = 'block';
   }
+  if (!s.phase || s.phase==='waiting' || s.phase==='closed') maxRevealedMoment = -1;
+  renderCh1Gates(s);
 });
 
 // ─── Ch1 ECG ───
@@ -346,12 +356,30 @@ function updateScoresTable(players) {
 }
 
 window.startChapter1 = async () => {
-  await set(ref(db,'gameState'), { chapter:'ch1_ecg', phase:'scoring', momentIndex:0, locked:false, revealedGroup:null });
+  if (!confirm('開始第一章？將從「初遇」時刻開始。')) return;
+  maxRevealedMoment = -1;
+  await set(ref(db,'gameState'), { chapter:'ch1_ecg', phase:'scoring', momentIndex:0, locked:false, revealedGroup:null, maxRevealedMoment:-1 });
   addLog('開始第一章 · 初遇時刻');
 };
 window.openMoment = async (idx) => {
+  // 只允許回看「已公布過」的時刻，不能往前跳關
+  if (idx > maxRevealedMoment + 1) { alert('請依序進行：先鎖定並公布目前時刻，才能前往下一個時刻。'); return; }
+  if (idx > maxRevealedMoment) {
+    // 前往尚未公布的新時刻（=下一時刻）
+    await update(ref(db,'gameState'), { phase:'scoring', momentIndex:idx, locked:false, revealedGroup:null });
+    addLog('開啟時刻：'+MOMENTS[idx]);
+  } else {
+    // 回看已公布時刻 → 重新公布該時刻
+    await update(ref(db,'gameState'), { phase:'reveal', momentIndex:idx, revealedGroup:'all', locked:true });
+    addLog('回看時刻：'+MOMENTS[idx]);
+  }
+};
+window.nextMoment = async () => {
+  if (maxRevealedMoment < currentMomentIndex) { alert('請先公布目前時刻的評分，再前往下一時刻。'); return; }
+  if (currentMomentIndex >= 4) { alert('已是最後一個時刻（此刻）。五個時刻皆已公布，可公布最終心電圖。'); return; }
+  const idx = currentMomentIndex + 1;
   await update(ref(db,'gameState'), { phase:'scoring', momentIndex:idx, locked:false, revealedGroup:null });
-  addLog('開啟時刻：'+MOMENTS[idx]);
+  addLog('前往下一時刻：'+MOMENTS[idx]);
 };
 window.toggleLock = async () => {
   isLocked = !isLocked;
@@ -360,25 +388,51 @@ window.toggleLock = async () => {
   addLog(isLocked?'鎖定時刻':'解除鎖定');
 };
 window.revealScores = async (group) => {
+  if (!isLocked) { alert('請先「🔒 鎖定當前時刻」再公布評分。'); return; }
   const labels = { A:'周可一×劉白', B:'李天樂×姜萊', C:'星群×杜綿', all:'全部' };
-  await update(ref(db,'gameState'), { phase:'reveal', revealedGroup:group, momentIndex:currentMomentIndex });
+  const newMax = Math.max(maxRevealedMoment, currentMomentIndex);
+  await update(ref(db,'gameState'), { phase:'reveal', revealedGroup:group, momentIndex:currentMomentIndex, maxRevealedMoment:newMax });
   addLog(`公布評分 [${labels[group]}]：${MOMENTS[currentMomentIndex]}`);
 };
 window.revealEcg = async (group) => {
+  if (maxRevealedMoment < 4) { alert('五個時刻都公布完畢後，才能公布最終心電圖。'); return; }
   const labels = { A:'周可一×劉白', B:'李天樂×姜萊', C:'星群×杜綿', all:'全部' };
   await update(ref(db,'gameState'), { phase:'ecg', revealedGroup:group });
   addLog(`公布心電圖 [${labels[group]}]`);
 };
+// 依遊戲狀態啟用/停用第一章按鈕，防止誤按跳關
+function renderCh1Gates(s) {
+  const phase = s.phase, mi = s.momentIndex ?? 0, locked = !!s.locked;
+  const inCh1 = ['scoring','reveal','ecg'].includes(phase);
+  const tabs = document.querySelectorAll('#momentTabs .m-tab');
+  tabs.forEach((t,i) => {
+    const allowed = inCh1 && i <= maxRevealedMoment + 1;
+    t.disabled = !allowed;
+    t.style.opacity = allowed ? '1' : '0.35';
+    t.style.pointerEvents = allowed ? 'auto' : 'none';
+  });
+  const lockBtn = document.getElementById('lockBtn');
+  if (lockBtn) lockBtn.disabled = !(inCh1 && phase !== 'ecg');
+  const revealEnabled = inCh1 && locked && phase !== 'ecg';
+  document.querySelectorAll('#ch1RevealGroup .btn').forEach(b => { b.disabled = !revealEnabled; b.style.opacity = revealEnabled?'1':'0.4'; });
+  const nextBtn = document.getElementById('nextMomentBtn');
+  if (nextBtn) { const en = inCh1 && maxRevealedMoment >= mi && mi < 4; nextBtn.disabled = !en; nextBtn.style.opacity = en?'1':'0.4'; }
+  const ecgEnabled = inCh1 && maxRevealedMoment >= 4;
+  document.querySelectorAll('#ch1EcgGroup .btn').forEach(b => { b.disabled = !ecgEnabled; b.style.opacity = ecgEnabled?'1':'0.4'; });
+}
 
 // ─── Ch2 Love Choice ───
 window.startLoveChoice = async (round) => {
+  if (!confirm(`開始「還能再愛嗎？」第${['','一','二','三'][round]}次？將清除本次舊選擇。`)) return;
   currentLcRound = round; lcIsLocked = false;
+  await remove(ref(db, `loveChoices/round${round}`));  // 清掉本次殘留，避免亂跳
   await set(ref(db,'gameState'), { chapter:'ch2_lovechoice', phase:'lovechoice', lcRound:round, locked:false, lcChoices:{} });
   document.getElementById('lcPanel').style.display = 'block';
   document.getElementById('lcLockBtn').textContent = '🔒 鎖定選擇';
   addLog(`開始「還能再愛嗎？」第${['','一','二','三'][round]}次`);
 };
 window.revealLoveChoice = async (round) => {
+  if (!confirm(`公布第${['','一','二','三'][round]}次的結果？`)) return;
   await update(ref(db,'gameState'), { phase:'lovechoice_result', lcRound:round, locked:true });
   addLog(`公布「還能再愛嗎？」第${['','一','二','三'][round]}次`);
 };
@@ -407,14 +461,20 @@ window.toggleLcLock = async () => {
 
 // ─── Ch3 Moon Party ───
 window.startMoonParty = async (round) => {
+  if (!confirm(`開始滿月派對 第${round}局？將清除本局舊的房間選擇。`)) return;
   currentMpRound = round;
-  await set(ref(db,'gameState'), { chapter:'ch3_moonparty', phase:'moonparty', mpRound:round, mpRevealPhase:null, locked:false });
+  await remove(ref(db, `moonParty/round${round}`)); // 清掉本局殘留，避免亂跳
+  await set(ref(db,'gameState'), { chapter:'ch3_moonparty', phase:'moonparty', mpRound:round, mpRevealPhase:null, mpRevealed:{}, locked:false });
   document.getElementById('mpPanel').style.display = 'block';
   addLog(`開始滿月派對 第${round}局`);
 };
 window.revealMoonRoom = async (phase) => {
   const labels = { waxing:'上弦月', full:'滿月', waning:'下弦月' };
-  await update(ref(db,'gameState'), { phase:'moonparty_reveal', mpRevealPhase:phase });
+  // 累加已公布房間，公布一間不影響其他房間的玩家
+  const snap = await get(ref(db,'gameState/mpRevealed'));
+  const revealed = snap.exists() ? (snap.val()||{}) : {};
+  revealed[phase] = true;
+  await update(ref(db,'gameState'), { phase:'moonparty_reveal', mpRevealPhase:phase, mpRevealed:revealed });
   addLog(`公布房間：${labels[phase]}`);
 };
 function refreshMpLists() {
@@ -445,7 +505,9 @@ const JOURNEY_OPTION_LABELS = {
   '杜綿':   { fixed:'（默認）和李天樂' },
 };
 window.startJourney = async () => {
+  if (!confirm('開始第四章「最後的旅行」？將清除舊的旅行選擇。')) return;
   journeyLocked = false;
+  await remove(ref(db,'journey')); // 清掉殘留
   await set(ref(db,'gameState'), { chapter:'ch4_journey', phase:'journey', locked:false });
   document.getElementById('journeyPanel').style.display = 'block';
   document.getElementById('journeyLockBtn').textContent = '🔒 鎖定選擇';
@@ -458,6 +520,7 @@ window.toggleJourneyLock = async () => {
   addLog(journeyLocked?'鎖定旅行選擇':'解除鎖定');
 };
 window.revealJourney = async () => {
+  if (!confirm('公布旅行結果？將依所有人的選擇分配文本到玩家手機。')) return;
   await update(ref(db,'gameState'), { phase:'journey_reveal', locked:true });
   addLog('公布旅行結果');
 };
@@ -483,7 +546,9 @@ onValue(ref(db,'journey'), (snap) => {
 const FINAL_KEY_TO_CHAR = { zky:'周可一', lb:'劉白', dm:'杜綿', jl:'姜萊', lt:'李天樂', xq:'星群' };
 const FINAL_CHAR_TO_KEY = { '周可一':'zky', '劉白':'lb', '杜綿':'dm', '姜萊':'jl', '李天樂':'lt', '星群':'xq' };
 window.startFinal = async () => {
+  if (!confirm('開始第五章「最後的選擇」？將清除舊的選擇。')) return;
   finalLocked = false;
+  await remove(ref(db,'finalChoice')); // 清掉殘留
   await set(ref(db,'gameState'), { chapter:'ch5_final', phase:'final', locked:false });
   document.getElementById('finalPanel').style.display = 'block';
   document.getElementById('finalLockBtn').textContent = '🔒 鎖定選擇';
@@ -496,6 +561,7 @@ window.toggleFinalLock = async () => {
   addLog(finalLocked?'鎖定最後選擇':'解除鎖定');
 };
 window.revealFinal = async () => {
+  if (!confirm('公布最終結局？互選成功者將分配結局文本，其餘為無緣結局。')) return;
   await update(ref(db,'gameState'), { phase:'final_reveal', locked:true });
   addLog('🌕 公布結局');
 };
@@ -523,13 +589,24 @@ onValue(ref(db,'finalChoice'), (snap) => {
 
 // ─── Reset ───
 window.closeAndReset = async () => {
-  if (!confirm('確定要關閉遊戲？所有玩家將被強制退出，所有資料將清除。')) return;
+  if (!confirm('確定要關閉遊戲？所有玩家會被強制退出，所有資料（評分／選擇／房間／旅行／結局）都會清除，讓下一局能重新登入。')) return;
+  // 先廣播 closed，讓每支手機清掉登入 session、退回選角畫面
   await set(ref(db,'gameState'), { phase:'closed' });
+  maxRevealedMoment = -1;
+  addLog('🚪 已廣播關閉，2.5 秒後清除所有資料…');
   setTimeout(async () => {
-    await remove(ref(db,'gameState'));
-    await remove(ref(db,'players'));
-  }, 2000);
-  addLog('🚪 遊戲已關閉並重置');
+    await Promise.all([
+      remove(ref(db,'gameState')),
+      remove(ref(db,'players')),
+      remove(ref(db,'loveChoices')),
+      remove(ref(db,'moonParty')),
+      remove(ref(db,'journey')),
+      remove(ref(db,'finalChoice')),
+    ]);
+    // 收起各章總覽面板
+    ['lcPanel','mpPanel','journeyPanel','finalPanel'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+    addLog('✅ 全部資料已清除，可開始下一局');
+  }, 2500);
 };
 
 function addLog(msg) {
@@ -542,6 +619,7 @@ function addLog(msg) {
 }
 
 initStatusGrid();
+renderCh1Gates({});
 addLog('GM 控制台已連線');
 </script>
 </body>
